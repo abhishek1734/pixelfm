@@ -3,6 +3,7 @@ import "./globals.css";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { PlayerProvider } from "@/context/PlayerContext";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "PIXELIFY — 16-Bit Retro Digital Music Player",
@@ -44,6 +45,7 @@ export default function RootLayout({
             <PlayerProvider>{children}</PlayerProvider>
           </AuthProvider>
         </SettingsProvider>
+        <Analytics />
       </body>
     </html>
   );
