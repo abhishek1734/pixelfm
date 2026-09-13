@@ -17,7 +17,9 @@ import { PixelBadge } from '@/components/common/CRTOverlay';
 export function LandingView() {
   const { loginWithSpotify, enterMockMode, isLoading, error } = useAuth();
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
-  const [clientIdInput, setClientIdInput] = useState('');
+  const [clientIdInput, setClientIdInput] = useState(
+    process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || ''
+  );
   const [connectError, setConnectError] = useState<string | null>(null);
 
   const handleSpotifyConnect = async (e: React.FormEvent) => {
