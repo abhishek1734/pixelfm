@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PixelCat } from '@/components/mascot/PixelCat';
+import { PixelFMLogo } from '@/components/common/PixelFMLogo';
 import { cn } from '@/lib/utils';
 
 // ============================================================
@@ -68,37 +69,8 @@ export function LoadingScreen({
     >
       {/* ─── Center Hero ───────────────────────────────────── */}
       <div className="flex flex-col items-center max-w-md w-full text-center">
-        {/* Pixel Green Headphones Logo */}
-        <div className="mb-3.5 text-[#22C55E] animate-pixel-pulse">
-          <svg
-            width="42"
-            height="38"
-            viewBox="0 0 24 22"
-            fill="none"
-            shapeRendering="crispEdges"
-            className="w-11 h-10"
-          >
-            {/* Headband */}
-            <rect x="6" y="2" width="12" height="2" fill="#22C55E" />
-            <rect x="4" y="4" width="2" height="4" fill="#22C55E" />
-            <rect x="18" y="4" width="2" height="4" fill="#22C55E" />
-            
-            {/* Left Ear Cushion */}
-            <rect x="2" y="8" width="5" height="10" fill="#22C55E" />
-            <rect x="3" y="10" width="3" height="6" fill="#0A0F17" />
-            <rect x="4" y="11" width="1" height="4" fill="#22C55E" />
-
-            {/* Right Ear Cushion */}
-            <rect x="17" y="8" width="5" height="10" fill="#22C55E" />
-            <rect x="18" y="10" width="3" height="6" fill="#0A0F17" />
-            <rect x="19" y="11" width="1" height="4" fill="#22C55E" />
-          </svg>
-        </div>
-
-        {/* Brand Name */}
-        <h1 className="font-pixel text-[18px] md:text-[20px] tracking-wider text-[#22C55E] mb-2.5 drop-shadow-[0_0_8px_rgba(34,197,94,0.4)]">
-          PIXELFM
-        </h1>
+        {/* Authentic PixelFMLogo (Badge + PIXELFM Typography) */}
+        <PixelFMLogo size="xl" layout="col" className="mb-4" />
 
         {/* Tagline — Sentence case, clean monospace, with ample breathing room */}
         <p className="font-mono text-[13px] md:text-[14px] text-[#7E8B9B] tracking-normal mb-16">

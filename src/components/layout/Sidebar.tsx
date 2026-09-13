@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { NavPage, Playlist } from '@/types/music';
 import { PixelIcon } from '@/components/common/PixelIcon';
 import { PixelCat } from '@/components/mascot/PixelCat';
+import { PixelFMLogo } from '@/components/common/PixelFMLogo';
 import { useAuth } from '@/context/AuthContext';
 
 // ============================================================
@@ -107,32 +108,9 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => onNavigate('home')}
-          className="flex items-center gap-2.5 cursor-pointer text-left hover:opacity-90 transition-opacity"
+          className="cursor-pointer text-left hover:opacity-90 transition-opacity focus:outline-none"
         >
-          {/* Phosphor Green Headphones SVG Icon */}
-          <div className="w-8 h-8 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 flex items-center justify-center flex-shrink-0 shadow-[0_0_12px_rgba(34,197,94,0.2)]">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#22C55E]">
-              <path
-                d="M3 14V11C3 6.02944 7.02944 2 12 2C16.9706 2 21 6.02944 21 11V14M3 14H6C6.55228 14 7 14.4477 7 15V19C7 19.5523 6.55228 20 6 20H4C3.44772 20 3 19.5523 3 19V14ZM21 14H18C17.4477 14 17 14.4477 17 15V19C17 19.5523 17.4477 20 18 20H20C20.5523 20 21 19.5523 21 19V14Z"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-pixel text-[13px] tracking-widest text-[#22C55E] flex items-center gap-1 font-bold">
-                <span className="text-white">PIXEL</span>
-                <span className="text-[#22C55E]">FM</span>
-              </span>
-              <span className="text-[9px] font-pixel-ui text-[#64748B] tracking-wide mt-0.5">
-                RETRO AUDIO
-              </span>
-            </div>
-          )}
+          <PixelFMLogo size="md" showText={!isCollapsed} />
         </button>
       </div>
 

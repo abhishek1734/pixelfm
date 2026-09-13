@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { PixelIcon } from '@/components/common/PixelIcon';
+import { PixelFMLogo } from '@/components/common/PixelFMLogo';
 import { PixelButton } from '@/components/common/PixelButton';
 import { PixelVisualizer } from '@/components/common/PixelVisualizer';
 import { PixelModal } from '@/components/common/PixelModal';
@@ -55,12 +56,7 @@ export function LandingView() {
       {/* ─── Top Bar: Brand & System Status ──────────────── */}
       <div className="w-full max-w-5xl flex items-center justify-between border-b border-border-subtle pb-4 z-10">
         <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-bg-elevated border border-border-strong">
-            <PixelIcon name="pixel-logo" size={20} color="var(--color-accent-primary)" />
-          </div>
-          <span className="font-pixel text-[13px] tracking-wider text-[#22C55E]">
-            PIXEL<span className="text-white">FM</span> <span className="text-[9px] text-[#22C55E] font-mono">v2.0</span>
-          </span>
+          <PixelFMLogo size="sm" showText={true} />
         </div>
 
         <div className="flex items-center gap-2">
