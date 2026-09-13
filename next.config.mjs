@@ -1,5 +1,12 @@
-/** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_SPOTIFY_CLIENT_ID:
+      process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ||
+      process.env.Spotify_Client_ID ||
+      process.env.SPOTIFY_CLIENT_ID ||
+      process.env.spotify_client_id ||
+      '',
+  },
   images: {
     remotePatterns: [
       {
