@@ -149,10 +149,12 @@ export async function getPlaybackState(
   token: string
 ): Promise<SpotifyPlaybackState | null> {
   try {
-    return await spotifyFetch<SpotifyPlaybackState>(
+    const state = await spotifyFetch<SpotifyPlaybackState>(
       "/me/player?additional_types=track",
       token
     );
+    if (!state || !state.device) return null;
+    return state;
   } catch {
     return null;
   }
@@ -176,7 +178,7 @@ export async function getAvailableDevices(
     "/me/player/devices",
     token
   );
-  return data?.devices ?? [];
+  return (data?.devices ?? []).filter(Boolean);
 }
 
 export async function startPlayback(
@@ -275,11 +277,23 @@ export async function getUserPlaylists(
   token: string,
   limit = 50
 ): Promise<SpotifyPlaylist[]> {
-  const data = await spotifyFetch<{ items: SpotifyPlaylist[] }>(
-    `/me/playlists?limit=${limit}`,
-    token
-  );
-  return data?.items ?? [];
+  try {
+    const data = await spotifyFetch<{ items: SpotifyPlaylist[] }>(
+      `/me/playlists?limit=${limit}`,
+      token
+    );
+    return (data?.items ?? [])
+      .filter(Boolean)
+      .map((p) => ({
+        ...p,
+        name: p.name || "Untitled Playlist",
+        images: p.images || [],
+        tracks: p.tracks || { total: 0 },
+        owner: p.owner || { display_name: "Spotify" },
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export async function getLikedTracks(
@@ -287,22 +301,32 @@ export async function getLikedTracks(
   limit = 50,
   offset = 0
 ): Promise<SavedTrack[]> {
-  const data = await spotifyFetch<{ items: SavedTrack[] }>(
-    `/me/tracks?limit=${limit}&offset=${offset}`,
-    token
-  );
-  return data?.items ?? [];
+  try {
+    const data = await spotifyFetch<{ items: SavedTrack[] }>(
+      `/me/tracks?limit=${limit}&offset=${offset}`,
+      token
+    );
+    return (data?.items ?? []).filter((i) => i && i.track);
+  } catch {
+    return [];
+  }
 }
 
 export async function getRecentlyPlayed(
   token: string,
   limit = 20
 ): Promise<SpotifyTrack[]> {
-  const data = await spotifyFetch<{ items: { track: SpotifyTrack }[] }>(
-    `/me/player/recently-played?limit=${limit}`,
-    token
-  );
-  return data?.items?.map((i) => i.track) ?? [];
+  try {
+    const data = await spotifyFetch<{ items: { track: SpotifyTrack }[] }>(
+      `/me/player/recently-played?limit=${limit}`,
+      token
+    );
+    return (data?.items ?? [])
+      .filter((i) => i && i.track)
+      .map((i) => i.track);
+  } catch {
+    return [];
+  }
 }
 
 export async function searchSpotify(
@@ -328,8 +352,12 @@ export async function getPlaylistTracks(
   playlistId: string,
   limit = 50
 ): Promise<SpotifyTrack[]> {
-  const data = await spotifyFetch<{
-    items: { track: SpotifyTrack }[];
-  }>(`/playlists/${playlistId}/tracks?limit=${limit}`, token);
-  return data?.items?.map((i) => i.track).filter(Boolean) ?? [];
+  try {
+    const data = await spotifyFetch<{
+      items: { track: SpotifyTrack }[];
+    }>(`/playlists/${playlistId}/tracks?limit=${limit}`, token);
+    return (data?.items ?? []).filter((i) => i && i.track).map((i) => i.track);
+  } catch {
+    return [];
+  }
 }

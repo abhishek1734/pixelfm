@@ -14,6 +14,7 @@ import DeviceManager from "@/components/DeviceManager";
 import QueueDrawer from "@/components/QueueDrawer";
 import CRTOverlay from "@/components/CRTOverlay";
 import SettingsPanel from "@/components/SettingsPanel";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 import { playChime } from "@/lib/audioEngine";
 
@@ -138,10 +139,10 @@ function HomeView({
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
-                    {pl.name}
+                    {pl?.name || "Untitled Playlist"}
                   </span>
                   <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)]">
-                    {pl.tracks.total} tracks
+                    {pl?.tracks?.total ?? 0} tracks
                   </span>
                 </div>
               </div>
@@ -230,10 +231,12 @@ function HomeView({
                 )}
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
-                    {track.name}
+                    {track?.name || "Unknown Track"}
                   </span>
                   <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)] truncate">
-                    {track.artists.map((a) => a.name).join(", ")}
+                    {track?.artists?.length
+                      ? track.artists.map((a) => a?.name || "").filter(Boolean).join(", ")
+                      : "Unknown Artist"}
                   </span>
                 </div>
                 <span className="font-pixel text-[8px] text-[var(--color-phosphor)] flex-shrink-0">
@@ -355,13 +358,13 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
                     className="font-mono-retro truncate"
                     style={{ fontSize: 12, color: "var(--color-text-primary)" }}
                   >
-                    {pl.name}
+                    {pl?.name || "Untitled Playlist"}
                   </span>
                   <span
                     className="font-mono-retro"
                     style={{ fontSize: 10, color: "var(--color-text-dim)" }}
                   >
-                    {pl.tracks.total} tracks · {pl.owner?.display_name || "Spotify"}
+                    {pl?.tracks?.total ?? 0} tracks · {pl?.owner?.display_name || "Spotify"}
                   </span>
                 </div>
                 <span
@@ -599,7 +602,7 @@ export default function PlayerPage() {
   };
 
   return (
-    <>
+    <ErrorBoundary>
       <CRTOverlay enabled={crtEnabled} />
 
       <div
@@ -668,6 +671,6 @@ export default function PlayerPage() {
           </div>
         </div>
       </div>
-    </>
+    </ErrorBoundary>
   );
 }

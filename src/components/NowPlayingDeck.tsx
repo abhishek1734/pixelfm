@@ -167,12 +167,12 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
           }}
         >
           {albumArt ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={albumArt}
               alt={currentTrack?.album?.name ?? "Album Art"}
-              fill
-              style={{ objectFit: "cover", imageRendering: "pixelated" }}
-              unoptimized
+              className="w-full h-full object-cover"
+              style={{ imageRendering: "pixelated" }}
             />
           ) : (
             <div
@@ -200,7 +200,11 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
           style={{ fontFamily: "var(--font-pixel)", fontSize: 10, color: "var(--color-text-primary)" }}
         />
         <MarqueeText
-          text={currentTrack?.artists?.map((a) => a.name).join(", ") ?? "— — —"}
+          text={
+            currentTrack?.artists?.length
+              ? currentTrack.artists.map((a) => a?.name || "").filter(Boolean).join(", ")
+              : "— — —"
+          }
           style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--color-text-secondary)" }}
         />
         {currentTrack?.explicit && (

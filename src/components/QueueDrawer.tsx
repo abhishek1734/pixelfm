@@ -187,7 +187,7 @@ export default function QueueDrawer({ soundFX }: QueueDrawerProps) {
                     className="font-mono-retro w-20 text-right truncate hidden sm:block flex-shrink-0"
                     style={{ fontSize: 10, color: "var(--color-text-dim)" }}
                   >
-                    {track.artists?.[0]?.name}
+                    {track?.artists?.[0]?.name || "—"}
                   </span>
 
                   {/* Duration */}
