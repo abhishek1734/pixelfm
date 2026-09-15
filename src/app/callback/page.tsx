@@ -27,13 +27,13 @@ function CallbackInner() {
     const error = searchParams.get("error");
 
     if (error) {
-      console.error("[Callback] Spotify auth error:", error);
+      console.error("[Callback] Spotify returned error param:", error);
       router.replace("/?error=" + encodeURIComponent(error));
       return;
     }
 
     if (!code) {
-      router.replace("/");
+      router.replace("/?error=missing_auth_code");
       return;
     }
 
@@ -42,8 +42,9 @@ function CallbackInner() {
         router.replace("/player");
       })
       .catch((err) => {
-        console.error("[Callback] Token exchange failed:", err);
-        router.replace("/?error=token_exchange_failed");
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[Callback] Token exchange error:", message);
+        router.replace("/?error=" + encodeURIComponent(message));
       });
   }, [searchParams, handleCallback, router, isAuthenticated]);
 
@@ -81,7 +82,11 @@ function CallbackInner() {
 
       <div
         className="font-pixel animate-phosphor-flicker"
-        style={{ fontSize: 20, color: "var(--color-phosphor)", textShadow: "0 0 12px rgba(34,197,94,0.6)" }}
+        style={{
+          fontSize: 20,
+          color: "var(--color-phosphor)",
+          textShadow: "0 0 12px rgba(34,197,94,0.6)",
+        }}
       >
         PIXELFM
       </div>
@@ -91,14 +96,21 @@ function CallbackInner() {
 
 export default function CallbackPage() {
   return (
-    <Suspense fallback={
-      <div
-        className="flex items-center justify-center h-screen"
-        style={{ backgroundColor: "var(--color-void)", color: "var(--color-phosphor)" }}
-      >
-        <span className="font-pixel" style={{ fontSize: 9 }}>LOADING...</span>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div
+          className="flex items-center justify-center h-screen"
+          style={{
+            backgroundColor: "var(--color-void)",
+            color: "var(--color-phosphor)",
+          }}
+        >
+          <span className="font-pixel" style={{ fontSize: 9 }}>
+            LOADING...
+          </span>
+        </div>
+      }
+    >
       <CallbackInner />
     </Suspense>
   );

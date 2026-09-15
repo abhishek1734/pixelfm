@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import { playBootSequence, initDemoStream, playDemoStream } from "@/lib/audioEngine";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth, getEffectiveRedirectUri } from "@/contexts/AuthContext";
+import {
+  playBootSequence,
+  initDemoStream,
+  playDemoStream,
+  playChime,
+} from "@/lib/audioEngine";
 
 // ============================================================
 // Landing Page — Arcade boot-up screen
@@ -19,12 +24,22 @@ const BOOT_LINES = [
   { text: "SYSTEM READY ................ ●●●", delay: 1200 },
 ];
 
-export default function LandingPage() {
+function LandingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, setDemoMode, isAuthenticated } = useAuth();
   const [bootPhase, setBootPhase] = useState(0);
   const [bootDone, setBootDone] = useState(false);
   const [showCursor, setShowCursor] = useState(true);
+
+  const errorParam = searchParams.get("error");
+  const [activeError, setActiveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorParam) {
+      setActiveError(decodeURIComponent(errorParam));
+    }
+  }, [errorParam]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -72,9 +87,11 @@ export default function LandingPage() {
     await login();
   };
 
+  const expectedRedirect = getEffectiveRedirectUri();
+
   return (
     <div
-      className="flex flex-col items-center justify-center h-screen bg-retro-grid"
+      className="flex flex-col items-center justify-center min-h-screen bg-retro-grid py-8"
       style={{ backgroundColor: "var(--color-void)" }}
     >
       {/* CRT vignette */}
@@ -90,8 +107,8 @@ export default function LandingPage() {
       />
 
       <div
-        className="relative flex flex-col gap-8"
-        style={{ zIndex: 1, width: "min(600px, 90vw)" }}
+        className="relative flex flex-col gap-6"
+        style={{ zIndex: 1, width: "min(600px, 92vw)" }}
       >
         {/* Logo */}
         <div className="flex flex-col items-center gap-2">
@@ -108,7 +125,7 @@ export default function LandingPage() {
             PIXELFM
           </div>
           <div
-            className="font-pixel"
+            className="font-pixel text-center"
             style={{
               fontSize: 8,
               color: "var(--color-text-dim)",
@@ -119,6 +136,60 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Error Banner if authentication returned error */}
+        {activeError && (
+          <div
+            className="p-4 flex flex-col gap-2 animate-bounce-subtle"
+            style={{
+              backgroundColor: "rgba(239, 68, 68, 0.1)",
+              border: "2px solid #EF4444",
+              boxShadow: "4px 4px 0 #000, 0 0 16px rgba(239, 68, 68, 0.3)",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span
+                className="font-pixel"
+                style={{ fontSize: 9, color: "#EF4444" }}
+              >
+                ⚠ AUTH ERROR DETECTED
+              </span>
+              <button
+                onClick={() => {
+                  playChime("click");
+                  setActiveError(null);
+                  router.replace("/");
+                }}
+                className="font-pixel"
+                style={{
+                  fontSize: 8,
+                  color: "#EF4444",
+                  cursor: "pointer",
+                  background: "transparent",
+                  border: "none",
+                }}
+              >
+                [DISMISS]
+              </button>
+            </div>
+            <div
+              className="font-mono-retro text-xs text-red-300 leading-relaxed"
+              style={{ wordBreak: "break-word" }}
+            >
+              Reason: <strong>{activeError}</strong>
+            </div>
+            <div
+              className="font-mono-retro text-[11px] text-gray-300 mt-1 pt-2 border-t border-red-900/50"
+              style={{ lineHeight: 1.5 }}
+            >
+              Verify your Spotify Developer Dashboard contains this exact Redirect URI:
+              <br />
+              <code className="text-yellow-400 bg-black/60 px-1 py-0.5 mt-1 inline-block select-all">
+                {expectedRedirect}
+              </code>
+            </div>
+          </div>
+        )}
+
         {/* Boot terminal */}
         <div
           className="p-4 font-mono-retro"
@@ -126,7 +197,7 @@ export default function LandingPage() {
             backgroundColor: "var(--color-void)",
             border: "2px solid var(--color-elevated)",
             boxShadow: "4px 4px 0 #000, 0 0 20px rgba(34,197,94,0.1)",
-            minHeight: 200,
+            minHeight: 180,
           }}
         >
           {BOOT_LINES.slice(0, bootPhase).map((line, i) => (
@@ -199,5 +270,27 @@ export default function LandingPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="flex items-center justify-center h-screen"
+          style={{
+            backgroundColor: "var(--color-void)",
+            color: "var(--color-phosphor)",
+          }}
+        >
+          <span className="font-pixel" style={{ fontSize: 9 }}>
+            LOADING...
+          </span>
+        </div>
+      }
+    >
+      <LandingContent />
+    </Suspense>
   );
 }

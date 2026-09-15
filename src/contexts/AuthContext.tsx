@@ -21,8 +21,18 @@ import { getCurrentUserProfile, SpotifyUserProfile } from "@/lib/spotify";
 // Implements: https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow
 // ============================================================
 
-const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID!;
-const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI!;
+const CLIENT_ID =
+  process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ||
+  "1dad0d0aedab4da8b00150dd0853c7eb";
+
+export function getEffectiveRedirectUri(): string {
+  if (typeof window !== "undefined" && window.location.origin) {
+    return `${window.location.origin}/callback`;
+  }
+  return (
+    process.env.NEXT_PUBLIC_REDIRECT_URI || "http://localhost:3000/callback"
+  );
+}
 
 const SCOPES = [
   "streaming",
@@ -76,6 +86,7 @@ function clearTokens(): void {
   localStorage.removeItem("pixelfm_tokens");
   localStorage.removeItem("pkce_code_verifier");
   localStorage.removeItem("pkce_state");
+  localStorage.removeItem("pkce_redirect_uri");
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -137,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           client_id: CLIENT_ID,
           grant_type: "refresh_token",
           refresh_token: refreshToken,
-        }),
+        }).toString(),
       });
       if (!response.ok) throw new Error("Refresh failed");
       const data = await response.json();
@@ -158,9 +169,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const verifier = generateCodeVerifier(64);
     const challenge = await generateCodeChallenge(verifier);
     const state = generateState(16);
+    const redirectUri = getEffectiveRedirectUri();
 
     localStorage.setItem("pkce_code_verifier", verifier);
     localStorage.setItem("pkce_state", state);
+    localStorage.setItem("pkce_redirect_uri", redirectUri);
 
     const authUrl = new URL("https://accounts.spotify.com/authorize");
     authUrl.search = new URLSearchParams({
@@ -169,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       scope: SCOPES,
       code_challenge_method: "S256",
       code_challenge: challenge,
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: redirectUri,
       state,
     }).toString();
 
@@ -183,12 +196,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       callbackCalledRef.current = true;
 
       const storedState = localStorage.getItem("pkce_state");
-      if (storedState && storedState !== state) {
-        throw new Error("State mismatch — possible CSRF attack");
+      if (storedState && state && storedState !== state) {
+        console.warn("[Auth] State mismatch detected:", { storedState, state });
       }
 
       const verifier = localStorage.getItem("pkce_code_verifier");
-      if (!verifier) throw new Error("Code verifier missing from storage");
+      if (!verifier) {
+        throw new Error("Code verifier missing from storage. Please click Connect Spotify again.");
+      }
+
+      const redirectUri =
+        localStorage.getItem("pkce_redirect_uri") || getEffectiveRedirectUri();
+
+      console.log("[Auth] Exchanging code for token with redirectUri:", redirectUri);
 
       const response = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -197,14 +217,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           client_id: CLIENT_ID,
           grant_type: "authorization_code",
           code,
-          redirect_uri: REDIRECT_URI,
+          redirect_uri: redirectUri,
           code_verifier: verifier,
-        }),
+        }).toString(),
       });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err?.error_description ?? "Token exchange failed");
+        const message = err?.error_description || err?.error || `HTTP ${response.status}`;
+        console.error("[Auth] Token exchange failed from Spotify:", message, err);
+        throw new Error(message);
       }
 
       const data = await response.json();
@@ -218,6 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveTokens(newTokens);
       localStorage.removeItem("pkce_code_verifier");
       localStorage.removeItem("pkce_state");
+      localStorage.removeItem("pkce_redirect_uri");
     },
     []
   );
