@@ -116,16 +116,17 @@ const CAT_PIXELS_SURPRISED = [
   [T, T, T, T, T, T, T, T, T, T, T, T],
 ];
 
-function ZZZParticle({ delay }: { delay: number }) {
+function ZZZParticle({ delay, offset }: { delay: number; offset: { x: number; y: number } }) {
   return (
     <div
-      className="font-pixel"
+      className="font-pixel select-none"
       style={{
         position: "absolute",
-        top: 0,
-        right: -8,
-        fontSize: 8,
-        color: "#94a3b8",
+        top: offset.y,
+        right: offset.x,
+        fontSize: 9,
+        color: "#22C55E",
+        textShadow: "0 0 6px rgba(34, 197, 94, 0.6)",
         animation: `cat-sleep-zzz 2.5s ease-out ${delay}s infinite`,
         opacity: 0,
       }}
@@ -143,7 +144,7 @@ function HeartParticle({ x, y, delay }: { x: number; y: number; delay: number })
         top: y,
         left: x,
         fontSize: 10,
-        color: "#EC4899",
+        color: "#22C55E",
         animation: `heart-burst 0.8s ease-out ${delay}s forwards`,
         opacity: 0,
         pointerEvents: "none",
@@ -166,8 +167,8 @@ export default function PixelCat() {
       return;
     }
     if (isPaused) {
-      // Delay sleep by 3s after pause
-      const t = setTimeout(() => setCatState("sleeping"), 3000);
+      // Delay sleep by 2s after pause
+      const t = setTimeout(() => setCatState("sleeping"), 2000);
       setSleepTimer(t);
       return () => clearTimeout(t);
     } else {
@@ -206,29 +207,41 @@ export default function PixelCat() {
       : "";
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 select-none">
-      {/* Status label */}
-      <div className="font-pixel text-[8px] text-[var(--color-text-dim)] tracking-widest uppercase">
+    <div
+      className="rack-panel w-full flex flex-col items-center justify-center p-3 select-none relative"
+      style={{
+        borderRadius: "2px",
+        minHeight: 120,
+      }}
+    >
+      {/* 4 Corner Screws */}
+      <div className="rack-screw screw-tl" />
+      <div className="rack-screw screw-tr" />
+      <div className="rack-screw screw-bl" />
+      <div className="rack-screw screw-br" />
+
+      {/* Top Status Header */}
+      <div className="font-pixel text-[8px] text-[#64748B] tracking-widest uppercase mb-2">
         {catState === "playing"
-          ? "♪ GROOVING ♪"
+          ? "> GROOVING <"
           : catState === "sleeping"
-          ? "Z Z Z..."
-          : "!! !!"}
+          ? "> SLEEPING <"
+          : "> SURPRISED <"}
       </div>
 
-      {/* Cat container */}
+      {/* Cat Container with Particles */}
       <div
         className={`relative cursor-pointer ${animClass}`}
         onClick={handleClick}
-        title="Click the cat!"
+        title="Pet the cat!"
         style={{ imageRendering: "pixelated" }}
       >
-        {/* Sleeping Zzz particles */}
+        {/* Sleeping Zzz particles drifting up to the right */}
         {catState === "sleeping" && (
           <>
-            <ZZZParticle delay={0} />
-            <ZZZParticle delay={0.8} />
-            <ZZZParticle delay={1.6} />
+            <ZZZParticle delay={0} offset={{ x: -16, y: -8 }} />
+            <ZZZParticle delay={0.8} offset={{ x: -26, y: -16 }} />
+            <ZZZParticle delay={1.6} offset={{ x: -36, y: -24 }} />
           </>
         )}
 
@@ -240,37 +253,9 @@ export default function PixelCat() {
         {/* Pixel art cat */}
         <div style={{ display: "flex", flexDirection: "column" }}>
           {pixels.map((row, rowIdx) => (
-            <PixelRow key={rowIdx} pixels={row} size={7} />
+            <PixelRow key={rowIdx} pixels={row} size={6} />
           ))}
         </div>
-      </div>
-
-      {/* Mood indicator */}
-      <div className="flex gap-1">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="led-dot"
-            style={{
-              width: 6,
-              height: 6,
-              backgroundColor:
-                catState === "playing"
-                  ? "#22C55E"
-                  : catState === "sleeping"
-                  ? "#334155"
-                  : "#EC4899",
-              boxShadow:
-                catState === "playing"
-                  ? "0 0 4px #22C55E"
-                  : catState === "surprised"
-                  ? "0 0 4px #EC4899"
-                  : "none",
-              animation:
-                catState === "playing" ? `led-pulse ${1 + i * 0.2}s ease-in-out infinite` : "none",
-            }}
-          />
-        ))}
       </div>
     </div>
   );

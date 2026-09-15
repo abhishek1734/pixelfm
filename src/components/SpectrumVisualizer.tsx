@@ -121,7 +121,7 @@ export default function SpectrumVisualizer({
   const totalWidth = BAR_COUNT * (6 + 3) - 3;
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1.5 w-full">
       <canvas
         ref={canvasRef}
         width={totalWidth}
@@ -129,10 +129,17 @@ export default function SpectrumVisualizer({
         style={{
           imageRendering: "pixelated",
           display: "block",
+          maxHeight: height,
         }}
       />
-      <div className="font-pixel text-[6px] text-[var(--color-text-dim)] tracking-widest">
-        {isPlaying ? "◉ SPECTRUM ANALYZER" : "— STANDBY —"}
+      <div
+        className="font-pixel text-[6px] tracking-widest uppercase select-none"
+        style={{
+          color: isPlaying ? "#38BDF8" : "#64748B",
+          textShadow: isPlaying ? "0 0 6px rgba(56, 189, 248, 0.4)" : "none",
+        }}
+      >
+        + SPECTRUM ANALYZER -
       </div>
     </div>
   );

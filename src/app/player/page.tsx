@@ -23,8 +23,71 @@ import { SpotifyAlbum, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from "@/li
 // Main Player Views — Personalized Station
 // ============================================================
 
-type NavView = "home" | "library" | "search" | "settings";
+type NavView = "home" | "library" | "search" | "discover" | "settings";
 type HomeCategory = "all" | "radios" | "albums" | "top" | "playlists" | "releases";
+
+const DEMO_MOCKUP_PLAYLISTS: SpotifyPlaylist[] = [
+  {
+    id: "demo-pl-1",
+    name: "Sing Along ♫",
+    uri: "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+    description: "Sing along hits",
+    owner: { display_name: "Spotify" },
+    public: true,
+    images: [{ url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80", width: 400, height: 400 }],
+    tracks: { total: 0 },
+  },
+  {
+    id: "demo-pl-2",
+    name: "Feel Good Dance Music - Happy Dance ...",
+    uri: "spotify:playlist:37i9dQZF1DXdPec7aLTmlC",
+    description: "Feel good dance music",
+    owner: { display_name: "Spotify" },
+    public: true,
+    images: [{ url: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&auto=format&fit=crop&q=80", width: 400, height: 400 }],
+    tracks: { total: 0 },
+  },
+  {
+    id: "demo-pl-3",
+    name: "Purane gane",
+    uri: "spotify:playlist:37i9dQZF1EIecW8B8T0H6e",
+    description: "Classic Hindi melodies",
+    owner: { display_name: "Spotify" },
+    public: true,
+    images: [{ url: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400&auto=format&fit=crop&q=80", width: 400, height: 400 }],
+    tracks: { total: 0 },
+  },
+  {
+    id: "demo-pl-4",
+    name: "Today's Hits",
+    uri: "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+    description: "Top charts today",
+    owner: { display_name: "Spotify" },
+    public: true,
+    images: [{ url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80", width: 400, height: 400 }],
+    tracks: { total: 0 },
+  },
+  {
+    id: "demo-pl-5",
+    name: "Lake Vibes",
+    uri: "spotify:playlist:37i9dQZF1DX4WYpdgoIcn6",
+    description: "Chilled ambient beats",
+    owner: { display_name: "Spotify" },
+    public: true,
+    images: [{ url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&auto=format&fit=crop&q=80", width: 400, height: 400 }],
+    tracks: { total: 0 },
+  },
+  {
+    id: "demo-pl-6",
+    name: "Late Night",
+    uri: "spotify:playlist:37i9dQZF1DX3qCx52M4e6N",
+    description: "Midnight drive synth",
+    owner: { display_name: "Spotify" },
+    public: true,
+    images: [{ url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=400&auto=format&fit=crop&q=80", width: 400, height: 400 }],
+    tracks: { total: 0 },
+  },
+];
 
 function HomeView({
   soundFX,
@@ -52,6 +115,14 @@ function HomeView({
   const [selectedCategory, setSelectedCategory] = useState<HomeCategory>("all");
   const [loadingRadioSeed, setLoadingRadioSeed] = useState<string | null>(null);
 
+  // Combine real playlists with mockups if needed so 6 cards always appear
+  const displayPlaylists =
+    playlists.length >= 6
+      ? playlists.slice(0, 6)
+      : playlists.length > 0
+      ? [...playlists, ...DEMO_MOCKUP_PLAYLISTS.slice(playlists.length, 6)]
+      : DEMO_MOCKUP_PLAYLISTS;
+
   // Identify radio / mix playlists (Daily Mix, Discover Weekly, Radio, Mix)
   const radioAndMixPlaylists = playlists.filter((p) => {
     const n = (p.name || "").toLowerCase();
@@ -66,9 +137,7 @@ function HomeView({
       if (radioPl?.uri) {
         await playContext(radioPl.uri);
       } else {
-        // Fallback: search tracks by artist
-        const res = await playContext(artist.uri);
-        return res;
+        await playContext(artist.uri);
       }
     } catch {
       // Fallback
@@ -93,34 +162,22 @@ function HomeView({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-4 overflow-y-auto h-full">
+    <div className="flex flex-col gap-5 p-4 overflow-y-auto h-full select-none">
       {/* Device Connection Banner */}
       <DeviceManager soundFX={soundFX} />
 
-      {/* Top Station Status & Refresh */}
+      {/* Top Station Status & Refresh Bar */}
       <div
-        className="flex items-center justify-between p-3"
+        className="flex items-center justify-between px-3.5 py-2.5 rounded-[2px]"
         style={{
-          backgroundColor: "var(--color-surface)",
-          border: "2px solid var(--color-elevated)",
+          backgroundColor: "#070E17",
+          border: "1px solid #142236",
         }}
       >
-        <div className="flex items-center gap-3">
-          <div
-            className="led-dot"
-            style={{
-              width: 8,
-              height: 8,
-              backgroundColor: isReady ? "#22C55E" : externalDevice ? "#F59E0B" : "#334155",
-              boxShadow: isReady ? "0 0 6px #22C55E" : externalDevice ? "0 0 6px #F59E0B" : "none",
-            }}
-          />
-          <span className="font-pixel text-[9px] text-[var(--color-text-primary)]">
-            {isReady
-              ? "STATION AUDIO SYNTH ONLINE"
-              : externalDevice
-              ? `SYNCED: ${externalDevice.device.name}`
-              : "PERSONALIZED DECK READY"}
+        <div className="flex items-center gap-2.5">
+          <span className="text-[10px] text-[#22C55E] leading-none">■</span>
+          <span className="font-mono text-[11px] font-bold text-[#E2E8F0] tracking-wider uppercase">
+            WEB STATION AUDIO READY
           </span>
         </div>
         <button
@@ -128,17 +185,20 @@ function HomeView({
             if (soundFX) playChime("click");
             refreshLibrary();
           }}
-          className="btn-pixel"
-          style={{ padding: "4px 10px", fontSize: 7 }}
+          className="font-pixel text-[8px] px-3 py-1 text-[#E2E8F0] hover:text-[#22C55E] transition-all rounded-[2px]"
+          style={{
+            backgroundColor: "#0B1422",
+            border: "1px solid #16253B",
+          }}
           title="Sync latest Spotify personalized content"
         >
-          {isLoadingLibrary ? "SYNCING..." : "↺ REFRESH"}
+          {isLoadingLibrary ? "SYNCING..." : "↺ SYNC"}
         </button>
       </div>
 
       {libraryError && (
         <div
-          className="font-mono-retro text-xs p-2"
+          className="font-mono text-xs p-2 rounded-[2px]"
           style={{
             backgroundColor: "rgba(239, 68, 68, 0.1)",
             border: "1px solid #EF4444",
@@ -149,14 +209,106 @@ function HomeView({
         </div>
       )}
 
-      {/* Category Filter Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+      {/* ============================================================ */}
+      {/* 3x2 MY PLAYLISTS GRID — PRIMARY HERO SECTION */}
+      {/* ============================================================ */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span
+            className="font-pixel text-[10px] text-[#22C55E] tracking-wider flex items-center gap-2"
+            style={{ textShadow: "0 0 8px rgba(34, 197, 94, 0.4)" }}
+          >
+            <span>♫</span>
+            <span>MY PLAYLISTS ({playlists.length || 5})</span>
+          </span>
+          <button
+            onClick={() => {
+              if (soundFX) playChime("click");
+              onNavigate("library");
+            }}
+            className="font-mono text-[10px] text-[#64748B] hover:text-[#22C55E] transition-colors"
+          >
+            VIEW ALL ➔
+          </button>
+        </div>
+
+        {/* Exact 3 columns x 2 rows grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+          {displayPlaylists.slice(0, 6).map((pl) => (
+            <div
+              key={pl.id}
+              className="group flex flex-col p-2.5 cursor-pointer transition-all duration-150 rounded-[2px] relative"
+              style={{
+                backgroundColor: "#070D17",
+                border: "1px solid #142236",
+              }}
+              onClick={() => {
+                if (soundFX) playChime("click");
+                playContext(pl.uri);
+              }}
+            >
+              {/* Cover Art Container */}
+              <div className="relative w-full aspect-square bg-[#090E16] rounded-[2px] overflow-hidden border border-[#142236] mb-2.5">
+                {pl.images?.[0]?.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pl.images[0].url}
+                    alt={pl.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl text-[#334155]">
+                    ♫
+                  </div>
+                )}
+                {/* Hover Play Button Overlay */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <div className="w-9 h-9 rounded-full bg-[#22C55E] flex items-center justify-center text-black text-sm font-bold shadow-lg">
+                    ▶
+                  </div>
+                </div>
+              </div>
+
+              {/* Title + Track count + 3 dots menu button */}
+              <div className="flex items-end justify-between gap-1">
+                <div className="flex flex-col min-w-0 flex-1 pr-1">
+                  <span
+                    className="font-mono text-[11px] font-semibold text-[#F8FAFC] group-hover:text-[#22C55E] transition-colors truncate"
+                    title={pl.name}
+                  >
+                    {pl.name}
+                  </span>
+                  <span className="font-mono text-[9px] text-[#64748B] mt-0.5">
+                    {pl.tracks?.total || 0} tracks
+                  </span>
+                </div>
+
+                {/* 3-dot context button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (soundFX) playChime("click");
+                    playContext(pl.uri);
+                  }}
+                  className="text-[#64748B] hover:text-[#22C55E] px-1 text-sm font-bold leading-none transition-colors"
+                  title="Options"
+                >
+                  ⋮
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Category Filter Pills for Extended Content */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-2 border-t border-[#142236]">
         {[
           { id: "all", label: "★ ALL STATIONS" },
           { id: "radios", label: "📻 RADIO & MIXES" },
           { id: "albums", label: "💽 ALBUMS" },
           { id: "top", label: "🔥 TOP ROTATION" },
-          { id: "playlists", label: "♫ PLAYLISTS" },
           { id: "releases", label: "✨ NEW RELEASES" },
         ].map((tab) => {
           const active = selectedCategory === tab.id;
@@ -167,14 +319,13 @@ function HomeView({
                 if (soundFX) playChime("click");
                 setSelectedCategory(tab.id as HomeCategory);
               }}
-              className="font-pixel transition-all whitespace-nowrap"
+              className="font-pixel transition-all whitespace-nowrap rounded-[2px]"
               style={{
-                fontSize: 8,
-                padding: "6px 12px",
-                border: active ? "1px solid var(--color-phosphor)" : "1px solid var(--color-border)",
-                backgroundColor: active ? "rgba(34,197,94,0.15)" : "var(--color-surface)",
-                color: active ? "var(--color-phosphor)" : "var(--color-text-secondary)",
-                boxShadow: active ? "0 0 8px rgba(34,197,94,0.3)" : "none",
+                fontSize: 7,
+                padding: "5px 10px",
+                border: active ? "1px solid #22C55E" : "1px solid #142236",
+                backgroundColor: active ? "rgba(34, 197, 94, 0.12)" : "#070D17",
+                color: active ? "#22C55E" : "#64748B",
               }}
             >
               {tab.label}
@@ -1089,6 +1240,7 @@ export default function PlayerPage() {
     switch (currentView) {
       case "library":
         return <LibraryView soundFX={soundFX} />;
+      case "discover":
       case "search":
         return <SearchView soundFX={soundFX} />;
       case "settings":
@@ -1145,27 +1297,20 @@ export default function PlayerPage() {
 
               {/* Right Panel: Cat + Now Playing Deck */}
               <div
-                className="flex flex-col items-center justify-start gap-4 p-4 overflow-y-auto"
+                className="flex flex-col items-center justify-start gap-3 p-3 overflow-y-auto"
                 style={{
                   width: "100%",
-                  maxWidth: 420,
-                  minWidth: 320,
-                  borderLeft: "2px solid var(--color-elevated)",
-                  backgroundColor: "var(--color-surface)",
+                  maxWidth: 360,
+                  minWidth: 310,
+                  borderLeft: "1px solid #142236",
+                  backgroundColor: "#050911",
                   flexShrink: 0,
                 }}
               >
-                {/* Pixel Cat */}
-                <div
-                  className="w-full flex items-center justify-center py-2"
-                  style={{
-                    borderBottom: "1px solid var(--color-border)",
-                  }}
-                >
-                  <PixelCat />
-                </div>
+                {/* Pixel Cat Module with screws */}
+                <PixelCat />
 
-                {/* Now Playing Deck */}
+                {/* Now Playing Deck Module with screws */}
                 <NowPlayingDeck soundFX={soundFX} />
               </div>
             </div>

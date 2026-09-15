@@ -431,3 +431,84 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 0;
   box-shadow: 2px 2px 0 #000;
 }
+
+/* ============================================================
+   RACK-MOUNT HARDWARE ACCENTS
+   ============================================================ */
+
+.rack-screw {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #475569 0%, #1e293b 70%, #0f172a 100%);
+  border: 1px solid #0f172a;
+  box-shadow: inset 1px 1px 1px rgba(255,255,255,0.25), 0 1px 3px rgba(0,0,0,0.9);
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.rack-screw::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 1.2px;
+  background: #090d16;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.rack-screw::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 1.2px;
+  background: #090d16;
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.screw-tl { top: 8px; left: 8px; }
+.screw-tr { top: 8px; right: 8px; }
+.screw-bl { bottom: 8px; left: 8px; }
+.screw-br { bottom: 8px; right: 8px; }
+
+.rack-panel {
+  background-color: #070D17;
+  border: 1px solid #142236;
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.6);
+}
+
+.rack-panel-sub {
+  background-color: #060B13;
+  border: 1px solid #121F33;
+  position: relative;
+}
+
+/* Chunky Play/Pause Button */
+.btn-play-chunky {
+  background-color: #22C55E;
+  color: #04080F;
+  border: 1px solid #4ADE80;
+  border-radius: 4px;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.45), inset 0 1px 0 rgba(255,255,255,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.btn-play-chunky:hover {
+  background-color: #4ADE80;
+  box-shadow: 0 0 22px rgba(34, 197, 94, 0.7);
+  transform: scale(1.04);
+}
+
+.btn-play-chunky:active {
+  transform: scale(0.96);
+}
+

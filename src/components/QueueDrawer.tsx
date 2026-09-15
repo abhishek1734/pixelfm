@@ -35,67 +35,97 @@ export default function QueueDrawer({ soundFX }: QueueDrawerProps) {
       : activeTab === "liked"
       ? likedTracks
       : recentlyPlayed; // Fallback to recent for queue (real queue requires separate API call)
-
   return (
     <div
       style={{
-        backgroundColor: "var(--color-surface)",
-        borderTop: "2px solid var(--color-elevated)",
-        transition: "height 0.2s ease",
+        backgroundColor: "#050A11",
+        borderTop: "1px solid #142236",
+        flexShrink: 0,
       }}
     >
-      {/* Drawer toggle tab */}
+      {/* Dock Bar */}
       <div
-        className="flex items-center justify-between px-4 cursor-pointer"
-        style={{
-          height: 32,
-          borderBottom: isOpen ? "1px solid var(--color-border)" : "none",
-        }}
-        onClick={toggle}
+        className="flex items-center justify-between px-4 py-2 select-none"
+        style={{ minHeight: 38 }}
       >
+        {/* Left: Queue Toggle + Breadcrumbs */}
         <div className="flex items-center gap-3">
-          <span className="font-pixel text-[8px] text-[var(--color-text-dim)]">
-            {isOpen ? "▼" : "▲"} QUEUE
-          </span>
-          {currentTrack && (
-            <span className="font-mono-retro text-[10px] text-[var(--color-text-secondary)]">
-              {currentTrack.name.slice(0, 30)}
-              {currentTrack.name.length > 30 ? "…" : ""}
+          <button
+            onClick={toggle}
+            className="flex items-center gap-1.5 font-pixel text-[8px] text-[#22C55E] transition-colors"
+            style={{ textShadow: "0 0 6px rgba(34, 197, 94, 0.4)" }}
+          >
+            <span>{isOpen ? "▼" : "▲"}</span>
+            <span>QUEUE</span>
+          </button>
+
+          {/* Current track / breadcrumb pills */}
+          <div className="hidden sm:flex items-center gap-2.5 font-mono text-[10px]">
+            <span className="text-[#F8FAFC] font-semibold truncate max-w-[140px]">
+              {currentTrack?.name || "Larusso"}
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          {["queue", "recent", "liked"].map((tab) => (
+            <span className="text-[#334155]">|</span>
             <button
-              key={tab}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (soundFX) playChime("click");
-                setActiveTab(tab as "queue" | "recent" | "liked");
+              onClick={() => {
+                setActiveTab("queue");
                 if (!isOpen) setIsOpen(true);
               }}
-              className="font-pixel"
-              style={{
-                fontSize: 6,
-                padding: "2px 6px",
-                backgroundColor:
-                  activeTab === tab ? "var(--color-elevated)" : "transparent",
-                border: "1px solid",
-                borderColor:
-                  activeTab === tab
-                    ? "var(--color-phosphor)"
-                    : "var(--color-border)",
-                color:
-                  activeTab === tab
-                    ? "var(--color-phosphor)"
-                    : "var(--color-text-dim)",
-                cursor: "pointer",
-                textTransform: "uppercase",
-              }}
+              className="text-[#64748B] hover:text-[#E2E8F0] transition-colors"
             >
-              {tab}
+              Next up
             </button>
-          ))}
+            <span className="text-[#334155]">|</span>
+            <button
+              onClick={() => {
+                setActiveTab("recent");
+                if (!isOpen) setIsOpen(true);
+              }}
+              className="text-[#64748B] hover:text-[#E2E8F0] transition-colors"
+            >
+              Recently Played
+            </button>
+            <span className="text-[#334155]">|</span>
+            <button
+              onClick={() => {
+                setActiveTab("liked");
+                if (!isOpen) setIsOpen(true);
+              }}
+              className="text-[#64748B] hover:text-[#E2E8F0] transition-colors"
+            >
+              Liked
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Tab Filter Buttons */}
+        <div className="flex items-center gap-1.5">
+          {[
+            { id: "queue", label: "QUEUE" },
+            { id: "recent", label: "RECENT" },
+            { id: "liked", label: "LIKED" },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (soundFX) playChime("click");
+                  setActiveTab(tab.id as "queue" | "recent" | "liked");
+                  if (!isOpen) setIsOpen(true);
+                }}
+                className="font-pixel text-[7px] px-2.5 py-1 rounded-[2px] transition-all"
+                style={{
+                  border: isActive ? "1px solid #22C55E" : "1px solid #16253B",
+                  backgroundColor: isActive ? "rgba(34, 197, 94, 0.12)" : "#070E18",
+                  color: isActive ? "#22C55E" : "#64748B",
+                  boxShadow: isActive ? "0 0 8px rgba(34, 197, 94, 0.25)" : "none",
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
