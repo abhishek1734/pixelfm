@@ -64,6 +64,24 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function setCookie(name: string, value: string): void {
+  if (typeof document !== "undefined") {
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=600; SameSite=Lax; Secure`;
+  }
+}
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function deleteCookie(name: string): void {
+  if (typeof document !== "undefined") {
+    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+  }
+}
+
 function loadTokens(): AuthTokens | null {
   try {
     const raw = localStorage.getItem("pixelfm_tokens");
@@ -78,11 +96,19 @@ function saveTokens(tokens: AuthTokens): void {
   localStorage.setItem("pixelfm_tokens", JSON.stringify(tokens));
 }
 
+// Only clears user tokens, NEVER touches in-flight PKCE state!
 function clearTokens(): void {
   localStorage.removeItem("pixelfm_tokens");
+}
+
+// Clears PKCE temporary exchange credentials
+function clearPKCE(): void {
   localStorage.removeItem("pkce_code_verifier");
   localStorage.removeItem("pkce_state");
   localStorage.removeItem("pkce_redirect_uri");
+  deleteCookie("pkce_code_verifier");
+  deleteCookie("pkce_state");
+  deleteCookie("pkce_redirect_uri");
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -167,9 +193,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const state = generateState(16);
     const redirectUri = getRedirectUri();
 
+    // Dual-store in both localStorage and SameSite=Lax cookie
     localStorage.setItem("pkce_code_verifier", verifier);
     localStorage.setItem("pkce_state", state);
     localStorage.setItem("pkce_redirect_uri", redirectUri);
+    setCookie("pkce_code_verifier", verifier);
+    setCookie("pkce_state", state);
+    setCookie("pkce_redirect_uri", redirectUri);
 
     const authUrl = new URL("https://accounts.spotify.com/authorize");
     authUrl.search = new URLSearchParams({
@@ -191,17 +221,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (callbackCalledRef.current) return;
       callbackCalledRef.current = true;
 
-      const storedState = localStorage.getItem("pkce_state");
+      const storedState = localStorage.getItem("pkce_state") || getCookie("pkce_state");
       if (storedState && state && storedState !== state) {
         throw new Error(`State mismatch: expected "${storedState}", got "${state}"`);
       }
 
-      const verifier = localStorage.getItem("pkce_code_verifier");
+      const verifier = localStorage.getItem("pkce_code_verifier") || getCookie("pkce_code_verifier");
       if (!verifier) {
-        throw new Error("PKCE code verifier missing from localStorage. Please retry logging in from the home screen.");
+        throw new Error("PKCE code verifier missing from storage. Please retry logging in from the home screen.");
       }
 
-      const redirectUri = localStorage.getItem("pkce_redirect_uri") || getRedirectUri();
+      const redirectUri =
+        localStorage.getItem("pkce_redirect_uri") ||
+        getCookie("pkce_redirect_uri") ||
+        getRedirectUri();
 
       const bodyParams = new URLSearchParams({
         client_id: CLIENT_ID,
@@ -232,15 +265,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setTokens(newTokens);
       saveTokens(newTokens);
-      localStorage.removeItem("pkce_code_verifier");
-      localStorage.removeItem("pkce_state");
-      localStorage.removeItem("pkce_redirect_uri");
+      // Clean up PKCE credentials only after success
+      clearPKCE();
     },
     []
   );
 
   const logout = useCallback(() => {
     clearTokens();
+    clearPKCE();
     setTokens(null);
     setUser(null);
     setDemoMode(false);
