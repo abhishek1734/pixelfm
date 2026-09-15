@@ -77,7 +77,7 @@ export default function SettingsPanel({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-4 overflow-y-auto h-full">
+    <div className="flex flex-col gap-6 p-3 sm:p-4 pb-28 md:pb-6 overflow-y-auto h-full">
       {/* Section: Audio Doctor */}
       <div>
         <div className="font-pixel text-[9px] text-[var(--color-amber)] mb-3 pb-1" style={{ borderBottom: "1px solid var(--color-border)" }}>

@@ -42,9 +42,9 @@ function ConnectionStatusDot() {
 
   if (isAuthenticated && (isReady || externalDevice)) {
     return (
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5" title="Connected">
         <span className="text-[9px] text-[#22C55E] leading-none">■</span>
-        <span className="font-pixel text-[8px] text-[#22C55E] tracking-wider">
+        <span className="hidden sm:inline font-pixel text-[8px] text-[#22C55E] tracking-wider">
           CONNECTED
         </span>
       </div>
@@ -53,9 +53,9 @@ function ConnectionStatusDot() {
 
   if (isDemoMode) {
     return (
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5" title="Demo Mode">
         <span className="text-[9px] text-[#F59E0B] leading-none">■</span>
-        <span className="font-pixel text-[8px] text-[#F59E0B] tracking-wider">
+        <span className="hidden sm:inline font-pixel text-[8px] text-[#F59E0B] tracking-wider">
           DEMO MODE
         </span>
       </div>
@@ -63,9 +63,9 @@ function ConnectionStatusDot() {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5" title="Offline">
       <span className="text-[9px] text-[#475569] leading-none">■</span>
-      <span className="font-pixel text-[8px] text-[#475569] tracking-wider">
+      <span className="hidden sm:inline font-pixel text-[8px] text-[#475569] tracking-wider">
         OFFLINE
       </span>
     </div>
@@ -100,7 +100,7 @@ export default function TopBar({ crtEnabled, onToggleCRT, soundFX }: TopBarProps
 
   return (
     <header
-      className="flex items-center justify-between px-4 py-2 select-none"
+      className="flex items-center justify-between px-2.5 sm:px-4 py-2 select-none"
       style={{
         backgroundColor: "#060B12",
         borderBottom: "1px solid #142236",
@@ -108,37 +108,37 @@ export default function TopBar({ crtEnabled, onToggleCRT, soundFX }: TopBarProps
       }}
     >
       {/* Left: Station ID */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
         <span
-          className="font-pixel text-[12px] text-[#22C55E] tracking-wider"
+          className="font-pixel text-[11px] sm:text-[12px] text-[#22C55E] tracking-wider"
           style={{ textShadow: "0 0 10px rgba(34, 197, 94, 0.6)" }}
         >
           PIXELFM
         </span>
 
-        <span className="hidden sm:inline-block font-mono text-[9px] text-[#64748B] tracking-widest uppercase">
+        <span className="hidden md:inline-block font-mono text-[9px] text-[#64748B] tracking-widest uppercase">
           HI-FI // STEREO
         </span>
 
         <div
-          className="flex items-center gap-1 px-2 py-0.5 rounded-sm"
+          className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-sm"
           style={{
             border: "1px solid #F59E0B",
             backgroundColor: "rgba(245, 158, 11, 0.05)",
           }}
         >
           <span className="text-[8px] text-[#F59E0B] leading-none animate-pulse">•</span>
-          <span className="font-pixel text-[7px] text-[#F59E0B] tracking-wider">
+          <span className="font-pixel text-[6px] sm:text-[7px] text-[#F59E0B] tracking-wider">
             LIVE
           </span>
         </div>
       </div>
 
       {/* Center: Frequency + Clock */}
-      <div className="flex items-center gap-8">
+      <div className="flex items-center gap-4 sm:gap-8">
         <FrequencyDisplay />
         <div
-          className="font-mono text-[11px] text-[#38BDF8] tracking-widest font-semibold"
+          className="hidden md:block font-mono text-[11px] text-[#38BDF8] tracking-widest font-semibold"
           style={{
             fontVariantNumeric: "tabular-nums",
             textShadow: "0 0 8px rgba(56, 189, 248, 0.4)",
@@ -149,13 +149,13 @@ export default function TopBar({ crtEnabled, onToggleCRT, soundFX }: TopBarProps
       </div>
 
       {/* Right: Status + CRT + Profile */}
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-2 sm:gap-3.5 flex-shrink-0">
         <ConnectionStatusDot />
 
         {/* CRT Toggle Button */}
         <button
           onClick={handleToggleCRT}
-          className="px-2.5 py-1 text-[9px] font-pixel transition-all rounded-[2px]"
+          className="px-2 sm:px-2.5 py-1 text-[8px] sm:text-[9px] font-pixel transition-all rounded-[2px]"
           style={{
             border: "1px solid #22C55E",
             backgroundColor: crtEnabled ? "rgba(34, 197, 94, 0.12)" : "#070E18",
@@ -174,7 +174,7 @@ export default function TopBar({ crtEnabled, onToggleCRT, soundFX }: TopBarProps
               if (soundFX) playChime("click");
               logout();
             }}
-            className="flex items-center gap-2 px-2 py-1 transition-all rounded-[2px]"
+            className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1 transition-all rounded-[2px]"
             style={{
               backgroundColor: "#0B1422",
               border: "1px solid #16253B",
@@ -211,7 +211,7 @@ export default function TopBar({ crtEnabled, onToggleCRT, soundFX }: TopBarProps
                 ▲
               </div>
             )}
-            <span className="font-mono text-[10px] text-[#E2E8F0] font-medium max-w-[90px] truncate">
+            <span className="hidden sm:inline font-mono text-[10px] text-[#E2E8F0] font-medium max-w-[90px] truncate">
               {user.display_name || "Abhishek"}
             </span>
           </button>
@@ -221,7 +221,7 @@ export default function TopBar({ crtEnabled, onToggleCRT, soundFX }: TopBarProps
             style={{ backgroundColor: "#0B1422", border: "1px solid #16253B" }}
           >
             <div className="w-4 h-4 rounded-[2px] bg-red-500/80" />
-            <span className="font-mono text-[10px] text-[#94A3B8]">Abhishek</span>
+            <span className="hidden sm:inline font-mono text-[10px] text-[#94A3B8]">Abhishek</span>
           </div>
         )}
       </div>

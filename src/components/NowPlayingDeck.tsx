@@ -93,18 +93,17 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
       <div className="rack-screw screw-br" />
 
       {/* Album Art + Vinyl Record */}
-      <div className="relative flex items-center justify-center my-1" style={{ height: 140 }}>
+      <div className="relative flex items-center justify-center my-1 overflow-hidden" style={{ height: 140 }}>
         {/* Album Cover Sleeve */}
         <div
-          className="relative z-10 overflow-hidden"
+          className="relative z-10 overflow-hidden rounded-[2px]"
           style={{
-            width: 124,
-            height: 124,
+            width: "clamp(108px, 32vw, 126px)",
+            height: "clamp(108px, 32vw, 126px)",
             backgroundColor: "#0A0F17",
             border: "1px solid #1E293B",
             boxShadow: "4px 4px 12px rgba(0,0,0,0.8)",
-            borderRadius: "2px",
-            transform: "translateX(-28px)",
+            transform: "translateX(-24px)",
           }}
         >
           {albumArt ? (
@@ -126,24 +125,24 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
         <div
           className="absolute z-0 flex items-center justify-center"
           style={{
-            width: 120,
-            height: 120,
+            width: "clamp(104px, 30vw, 122px)",
+            height: "clamp(104px, 30vw, 122px)",
             borderRadius: "50%",
             backgroundColor: "#05070A",
             border: "2px solid #181F2A",
             boxShadow: "0 0 16px rgba(0,0,0,0.9)",
-            transform: "translateX(36px)",
+            transform: "translateX(32px)",
             animation: !isPaused ? "spin-vinyl 4s linear infinite" : "spin-vinyl 4s linear infinite paused",
           }}
         >
           {/* Concentric Vinyl Grooves */}
-          {[22, 34, 46, 54].map((r) => (
+          {[18, 28, 38, 48].map((r) => (
             <div
               key={r}
               style={{
                 position: "absolute",
-                width: r * 2,
-                height: r * 2,
+                width: `${r * 2}%`,
+                height: `${r * 2}%`,
                 borderRadius: "50%",
                 border: "1px solid #151A22",
               }}
@@ -153,8 +152,8 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
           {/* Cyan Vinyl Center Label */}
           <div
             style={{
-              width: 38,
-              height: 38,
+              width: "32%",
+              height: "32%",
               borderRadius: "50%",
               backgroundColor: "#0284C7",
               border: "2px solid #38BDF8",
@@ -167,8 +166,8 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
             {/* Center Spindle Hole */}
             <div
               style={{
-                width: 8,
-                height: 8,
+                width: 7,
+                height: 7,
                 borderRadius: "50%",
                 backgroundColor: "#05070A",
                 border: "1px solid #000",
@@ -246,7 +245,7 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
       </div>
 
       {/* Playback Controls Row */}
-      <div className="flex items-center justify-center gap-3 pt-1">
+      <div className="flex items-center justify-center gap-2 sm:gap-3 pt-1">
         {/* Shuffle */}
         <button
           className="px-2 py-1.5 text-xs transition-colors rounded-[2px]"
@@ -282,6 +281,7 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
           style={{
             width: 44,
             height: 44,
+            minWidth: 44,
             fontSize: 16,
           }}
           title={isPaused ? "Play" : "Pause"}
@@ -319,7 +319,7 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
       </div>
 
       {/* Volume Slider Row */}
-      <div className="flex items-center gap-2.5 px-1 pt-1">
+      <div className="flex items-center gap-2 sm:gap-2.5 px-1 pt-1">
         <span className="font-mono text-[9px] text-[#64748B] tracking-wider">VOL</span>
         <span className="text-xs text-[#64748B]">🔊</span>
         <input

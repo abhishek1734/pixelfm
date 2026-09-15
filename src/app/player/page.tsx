@@ -23,7 +23,7 @@ import { SpotifyAlbum, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from "@/li
 // Main Player Views — Personalized Station
 // ============================================================
 
-type NavView = "home" | "library" | "search" | "discover" | "settings";
+type NavView = "home" | "library" | "search" | "discover" | "deck" | "settings";
 type HomeCategory = "all" | "radios" | "albums" | "top" | "playlists" | "releases";
 
 const DEMO_MOCKUP_PLAYLISTS: SpotifyPlaylist[] = [
@@ -162,7 +162,7 @@ function HomeView({
   };
 
   return (
-    <div className="flex flex-col gap-5 p-4 overflow-y-auto h-full select-none">
+    <div className="flex flex-col gap-5 p-3 sm:p-4 pb-28 md:pb-6 overflow-y-auto h-full select-none">
       {/* Device Connection Banner */}
       <DeviceManager soundFX={soundFX} />
 
@@ -176,7 +176,7 @@ function HomeView({
       >
         <div className="flex items-center gap-2.5">
           <span className="text-[10px] text-[#22C55E] leading-none">■</span>
-          <span className="font-mono text-[11px] font-bold text-[#E2E8F0] tracking-wider uppercase">
+          <span className="font-mono text-[10px] sm:text-[11px] font-bold text-[#E2E8F0] tracking-wider uppercase truncate">
             WEB STATION AUDIO READY
           </span>
         </div>
@@ -185,7 +185,7 @@ function HomeView({
             if (soundFX) playChime("click");
             refreshLibrary();
           }}
-          className="font-pixel text-[8px] px-3 py-1 text-[#E2E8F0] hover:text-[#22C55E] transition-all rounded-[2px]"
+          className="font-pixel text-[8px] px-2.5 sm:px-3 py-1 text-[#E2E8F0] hover:text-[#22C55E] transition-all rounded-[2px] flex-shrink-0"
           style={{
             backgroundColor: "#0B1422",
             border: "1px solid #16253B",
@@ -232,8 +232,8 @@ function HomeView({
           </button>
         </div>
 
-        {/* Exact 3 columns x 2 rows grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+        {/* 2 columns on mobile, 3 columns on desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3.5">
           {displayPlaylists.slice(0, 6).map((pl) => (
             <div
               key={pl.id}
@@ -812,7 +812,7 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 overflow-y-auto h-full">
+    <div className="flex flex-col gap-6 p-3 sm:p-4 pb-28 md:pb-6 overflow-y-auto h-full">
       {/* Filter Tabs */}
       <div className="flex gap-2 pb-1 border-b border-[var(--color-border)]">
         {[
@@ -1011,7 +1011,7 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4 h-full">
+    <div className="flex flex-col gap-4 p-3 sm:p-4 pb-28 md:pb-6 overflow-y-auto h-full">
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
           type="text"
@@ -1212,6 +1212,7 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
 export default function PlayerPage() {
   const router = useRouter();
   const { isAuthenticated, isDemoMode, isLoading } = useAuth();
+  const { currentTrack, isPaused, togglePlay } = usePlayer();
   const [crtEnabled, setCrtEnabled] = useState(true);
   const [soundFX, setSoundFX] = useState(true);
   const [currentView, setCurrentView] = useState<NavView>("home");
@@ -1226,7 +1227,7 @@ export default function PlayerPage() {
   if (isLoading) {
     return (
       <div
-        className="flex items-center justify-center h-screen"
+        className="flex items-center justify-center h-[100dvh]"
         style={{ backgroundColor: "var(--color-void)" }}
       >
         <div className="font-pixel text-[9px] text-[var(--color-phosphor)] animate-blink">
@@ -1243,6 +1244,17 @@ export default function PlayerPage() {
       case "discover":
       case "search":
         return <SearchView soundFX={soundFX} />;
+      case "deck":
+        return (
+          <div className="flex flex-col items-center gap-3 p-3 pb-28 overflow-y-auto h-full w-full">
+            <div className="w-full max-w-[380px]">
+              <PixelCat />
+            </div>
+            <div className="w-full max-w-[380px]">
+              <NowPlayingDeck soundFX={soundFX} />
+            </div>
+          </div>
+        );
       case "settings":
         return (
           <SettingsPanel
@@ -1262,7 +1274,7 @@ export default function PlayerPage() {
       <CRTOverlay enabled={crtEnabled} />
 
       <div
-        className="flex flex-col h-screen"
+        className="flex flex-col h-[100dvh] overflow-hidden"
         style={{ backgroundColor: "var(--color-void)" }}
       >
         {/* Top Bar */}
@@ -1276,8 +1288,8 @@ export default function PlayerPage() {
         />
 
         {/* Main Station Layout */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
+        <div className="flex flex-1 overflow-hidden relative">
+          {/* Sidebar: Desktop vertical rail + Mobile bottom dock */}
           <Sidebar
             currentView={currentView}
             onNavigate={setCurrentView}
@@ -1290,14 +1302,14 @@ export default function PlayerPage() {
             style={{ position: "relative" }}
           >
             <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-              {/* Center Panel (Home / Library / Search / Settings) */}
+              {/* Center Panel (Home / Library / Search / Deck / Settings) */}
               <div className="flex-1 overflow-hidden">
                 {renderMainContent()}
               </div>
 
-              {/* Right Panel: Cat + Now Playing Deck */}
+              {/* Right Panel: Cat + Now Playing Deck (Persistent on desktop >= lg) */}
               <div
-                className="flex flex-col items-center justify-start gap-3 p-3 overflow-y-auto"
+                className="hidden lg:flex flex-col items-center justify-start gap-3 p-3 overflow-y-auto"
                 style={{
                   width: "100%",
                   maxWidth: 360,
@@ -1315,10 +1327,63 @@ export default function PlayerPage() {
               </div>
             </div>
 
-            {/* Collapsible Queue Drawer */}
-            <QueueDrawer soundFX={soundFX} />
+            {/* Collapsible Queue Drawer (Desktop >= md) */}
+            <div className="hidden md:block">
+              <QueueDrawer soundFX={soundFX} />
+            </div>
           </div>
         </div>
+
+        {/* Mobile Sticky Mini-Player (floating above bottom dock when music is playing and not on deck view) */}
+        {currentTrack && currentView !== "deck" && (
+          <div
+            className="flex md:hidden items-center justify-between fixed bottom-[52px] left-2 right-2 z-40 p-2 rounded-[2px] cursor-pointer"
+            style={{
+              backgroundColor: "#070E17",
+              border: "1px solid #22C55E",
+              boxShadow: "0 0 14px rgba(34, 197, 94, 0.3), 0 4px 16px rgba(0,0,0,0.9)",
+            }}
+            onClick={() => {
+              if (soundFX) playChime("click");
+              setCurrentView("deck");
+            }}
+          >
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+              {currentTrack.album?.images?.[0]?.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentTrack.album.images[0].url}
+                  alt=""
+                  className="w-8 h-8 rounded-[2px] object-cover flex-shrink-0"
+                  style={{ imageRendering: "pixelated" }}
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-[2px] bg-[#162032] flex items-center justify-center text-xs flex-shrink-0">
+                  ♫
+                </div>
+              )}
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="font-mono text-[11px] font-bold text-[#F8FAFC] truncate">
+                  {currentTrack.name}
+                </span>
+                <span className="font-mono text-[9px] text-[#94A3B8] truncate">
+                  {currentTrack.artists?.[0]?.name || "Unknown"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (soundFX) playChime("click");
+                togglePlay();
+              }}
+              className="w-8 h-8 rounded-[2px] bg-[#22C55E] flex items-center justify-center text-black font-bold text-sm shadow-md flex-shrink-0"
+            >
+              {isPaused ? "▶" : "⏸"}
+            </button>
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );
