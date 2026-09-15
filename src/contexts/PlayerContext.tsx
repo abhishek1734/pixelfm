@@ -110,6 +110,7 @@ interface PlayerContextValue {
   transferToTab: () => Promise<void>;
   playContext: (contextUri: string, offset?: number) => Promise<void>;
   playTracks: (uris: string[], offset?: number) => Promise<void>;
+  playTrack: (track: SpotifyTrack, allTracks?: SpotifyTrack[]) => Promise<void>;
 }
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -353,6 +354,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [accessToken, deviceId]
   );
 
+  const playTrack = useCallback(
+    async (track: SpotifyTrack, allTracks?: SpotifyTrack[]) => {
+      setSdkTrack(track);
+      setSdkDuration(track.duration_ms || 180000);
+      setSdkPosition(0);
+      setSdkPaused(false);
+      if (soundFXEnabled) playTrackSwitch();
+
+      if (accessToken) {
+        try {
+          if (allTracks && allTracks.length > 0) {
+            const uris = allTracks.map((t) => t.uri).filter(Boolean);
+            const idx = allTracks.findIndex((t) => t.id === track.id || t.uri === track.uri);
+            await startPlayback(accessToken, deviceId || undefined, undefined, uris, Math.max(0, idx));
+          } else if (track.uri) {
+            await startPlayback(accessToken, deviceId || undefined, undefined, [track.uri], 0);
+          }
+        } catch (err) {
+          console.warn("[PlayerContext] Web API playback error:", err);
+        }
+      }
+    },
+    [accessToken, deviceId, soundFXEnabled]
+  );
+
   return (
     <PlayerContext.Provider
       value={{
@@ -378,6 +404,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         transferToTab,
         playContext,
         playTracks,
+        playTrack,
       }}
     >
       {children}

@@ -18,7 +18,13 @@ function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
+export default function NowPlayingDeck({
+  soundFX,
+  onClose,
+}: {
+  soundFX: boolean;
+  onClose?: () => void;
+}) {
   const {
     currentTrack,
     isPaused,
@@ -91,6 +97,25 @@ export default function NowPlayingDeck({ soundFX }: { soundFX: boolean }) {
       <div className="rack-screw screw-tr" />
       <div className="rack-screw screw-bl" />
       <div className="rack-screw screw-br" />
+
+      {/* Optional Minimize Header for Mobile Full Screen */}
+      {onClose && (
+        <div className="flex items-center justify-between pb-2 mb-1 border-b border-[#142236] z-10 relative">
+          <button
+            onClick={() => {
+              if (soundFX) playChime("click");
+              onClose();
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-pixel text-[#22C55E] border border-[#22C55E]/40 hover:border-[#22C55E] hover:bg-[#22C55E]/10 rounded-[2px]"
+          >
+            <span>←</span>
+            <span>MINIMIZE</span>
+          </button>
+          <span className="font-pixel text-[8px] text-[#22C55E] tracking-widest">
+            NOW PLAYING
+          </span>
+        </div>
+      )}
 
       {/* Album Art + Vinyl Record */}
       <div className="relative flex items-center justify-center my-1 overflow-hidden" style={{ height: 140 }}>

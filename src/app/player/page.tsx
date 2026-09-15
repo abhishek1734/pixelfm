@@ -15,6 +15,11 @@ import QueueDrawer from "@/components/QueueDrawer";
 import CRTOverlay from "@/components/CRTOverlay";
 import SettingsPanel from "@/components/SettingsPanel";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import MiniPlayer from "@/components/MiniPlayer";
+import DiscoverView from "@/components/views/DiscoverView";
+import PlaylistDetailView from "@/components/views/PlaylistDetailView";
+import AlbumDetailView from "@/components/views/AlbumDetailView";
+import ArtistDetailView from "@/components/views/ArtistDetailView";
 
 import { playChime } from "@/lib/audioEngine";
 import { SpotifyAlbum, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from "@/lib/spotify";
@@ -96,6 +101,7 @@ function HomeView({
   soundFX: boolean;
   onNavigate: (v: NavView) => void;
 }) {
+  const { user, isAuthenticated } = useAuth();
   const {
     playlists,
     likedTracks,
@@ -109,18 +115,19 @@ function HomeView({
     refreshLibrary,
     libraryError,
     startRadio,
+    openPlaylist,
+    openAlbum,
+    openArtist,
   } = useMusicData();
 
-  const { playContext, playTracks, isReady, externalDevice } = usePlayer();
+  const { playContext, playTracks, playTrack, isReady, externalDevice } = usePlayer();
   const [selectedCategory, setSelectedCategory] = useState<HomeCategory>("all");
   const [loadingRadioSeed, setLoadingRadioSeed] = useState<string | null>(null);
 
-  // Combine real playlists with mockups if needed so 6 cards always appear
+  // When authenticated, use strictly real Spotify playlists without mixing mockups
   const displayPlaylists =
-    playlists.length >= 6
-      ? playlists.slice(0, 6)
-      : playlists.length > 0
-      ? [...playlists, ...DEMO_MOCKUP_PLAYLISTS.slice(playlists.length, 6)]
+    isAuthenticated && playlists.length > 0
+      ? playlists
       : DEMO_MOCKUP_PLAYLISTS;
 
   // Identify radio / mix playlists (Daily Mix, Discover Weekly, Radio, Mix)
@@ -244,7 +251,7 @@ function HomeView({
               }}
               onClick={() => {
                 if (soundFX) playChime("click");
-                playContext(pl.uri);
+                openPlaylist(pl.id, pl);
               }}
             >
               {/* Cover Art Container */}
@@ -443,7 +450,7 @@ function HomeView({
                   className="card-pixel p-2 flex flex-col gap-2 cursor-pointer hover:border-[var(--color-phosphor)] transition-all group"
                   onClick={() => {
                     if (soundFX) playChime("click");
-                    playContext(album.uri);
+                    openAlbum(album.id, album);
                   }}
                 >
                   <div className="relative w-full aspect-square bg-[var(--color-void)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden">
@@ -503,7 +510,7 @@ function HomeView({
                   className="flex items-center gap-3 p-2 cursor-pointer hover:bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-pink)] transition-all group"
                   onClick={() => {
                     if (soundFX) playChime("click");
-                    playTracks([track.uri]);
+                    playTrack(track, topTracks);
                   }}
                 >
                   <span
@@ -615,7 +622,7 @@ function HomeView({
                   className="card-pixel p-2.5 flex flex-col gap-2 cursor-pointer hover:border-[var(--color-phosphor)] transition-all group"
                   onClick={() => {
                     if (soundFX) playChime("click");
-                    playContext(pl.uri);
+                    openPlaylist(pl.id, pl);
                   }}
                 >
                   <div className="relative w-full aspect-square bg-[var(--color-void)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden">
@@ -671,7 +678,7 @@ function HomeView({
                 className="card-pixel p-2 flex flex-col gap-2 cursor-pointer hover:border-[var(--color-phosphor)] transition-all group"
                 onClick={() => {
                   if (soundFX) playChime("click");
-                  playContext(album.uri);
+                  openAlbum(album.id, album);
                 }}
               >
                 <div className="relative w-full aspect-square bg-[var(--color-void)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden">
@@ -687,7 +694,7 @@ function HomeView({
                     <span className="text-xl">✨</span>
                   )}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <span className="font-pixel text-xs text-[var(--color-phosphor)]">▶ PLAY</span>
+                    <span className="font-pixel text-xs text-[var(--color-phosphor)]">▶ VIEW</span>
                   </div>
                 </div>
                 <div className="flex flex-col min-w-0">
@@ -707,7 +714,7 @@ function HomeView({
                 className="card-pixel p-2 flex flex-col gap-2 cursor-pointer hover:border-[var(--color-amber)] transition-all group"
                 onClick={() => {
                   if (soundFX) playChime("click");
-                  playContext(pl.uri);
+                  openPlaylist(pl.id, pl);
                 }}
               >
                 <div className="relative w-full aspect-square bg-[var(--color-void)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden">
@@ -723,7 +730,7 @@ function HomeView({
                     <span className="text-xl">📻</span>
                   )}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <span className="font-pixel text-xs text-[var(--color-amber)]">▶ TUNE</span>
+                    <span className="font-pixel text-xs text-[var(--color-amber)]">▶ VIEW</span>
                   </div>
                 </div>
                 <div className="flex flex-col min-w-0">
@@ -758,7 +765,7 @@ function HomeView({
                 className="flex items-center gap-3 p-2 cursor-pointer hover:bg-[var(--color-surface)] border border-transparent hover:border-[var(--color-elevated)] transition-all"
                 onClick={() => {
                   if (soundFX) playChime("click");
-                  playTracks([track.uri]);
+                  playTrack(track, recentlyPlayed);
                 }}
               >
                 {track.album?.images?.[0]?.url ? (
@@ -934,26 +941,84 @@ const DEFAULT_ALL_PLAYLISTS: LibraryPlaylistItem[] = [
 ];
 
 function LibraryView({ soundFX }: { soundFX: boolean }) {
-  const { playlists, likedTracks, albums, topArtists, isLoadingLibrary } = useMusicData();
-  const { playContext, playTracks } = usePlayer();
+  const { isAuthenticated } = useAuth();
+  const {
+    playlists,
+    likedTracks,
+    albums,
+    topArtists,
+    isLoadingLibrary,
+    openPlaylist,
+    openAlbum,
+    openArtist,
+  } = useMusicData();
+  const { playTrack, playTracks } = usePlayer();
   const [activeCategory, setActiveCategory] = useState<"playlists" | "artists" | "albums" | "liked" | "podcasts">("playlists");
   const [searchFilter, setSearchFilter] = useState("");
   const [sortOption, setSortOption] = useState("Recently played");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
+  // Determine real or demo pinned items
+  const realPinned: LibraryPlaylistItem[] = [
+    {
+      id: "pin-liked",
+      name: "Liked Songs",
+      songsCount: likedTracks.length,
+      updatedAt: "Updated today",
+      icon: "♥",
+      gradient: "linear-gradient(135deg, #4338CA 0%, #6366F1 50%, #A855F7 100%)",
+    },
+    ...playlists.slice(0, 4).map((p) => ({
+      id: p.id,
+      name: p.name,
+      songsCount: p.tracks?.total ?? 0,
+      updatedAt: "Updated recently",
+      icon: "♫",
+      imageUrl: p.images?.[0]?.url,
+      uri: p.uri,
+    })),
+    {
+      id: "pin-create",
+      name: "Create Playlist",
+      songsCount: 0,
+      updatedAt: "",
+      icon: "+",
+    },
+  ];
+
+  const realAllPlaylists: LibraryPlaylistItem[] = playlists.map((p, i) => ({
+    id: p.id,
+    name: p.name,
+    songsCount: p.tracks?.total ?? 0,
+    updatedAt: i === 0 ? "Updated 2 days ago" : i === 1 ? "Updated 5 days ago" : i < 4 ? "Updated 1 week ago" : "Updated recently",
+    icon: "♫",
+    imageUrl: p.images?.[0]?.url,
+    uri: p.uri,
+  }));
+
+  const pinnedSource =
+    isAuthenticated && (playlists.length > 0 || likedTracks.length > 0)
+      ? realPinned
+      : DEFAULT_PINNED_CARDS;
+
+  const allPlaylistsSource =
+    isAuthenticated && playlists.length > 0
+      ? realAllPlaylists
+      : DEFAULT_ALL_PLAYLISTS;
+
   // Filter items based on search input
   const query = searchFilter.trim().toLowerCase();
 
-  const filteredPinned = DEFAULT_PINNED_CARDS.filter((item) =>
+  const filteredPinned = pinnedSource.filter((item) =>
     !query || item.name.toLowerCase().includes(query)
   );
 
-  const filteredPlaylists = DEFAULT_ALL_PLAYLISTS.filter((item) =>
+  const filteredPlaylists = allPlaylistsSource.filter((item) =>
     !query || item.name.toLowerCase().includes(query)
   );
 
   return (
-    <div className="flex flex-col gap-5 p-3 sm:p-5 pb-28 md:pb-6 overflow-y-auto h-full select-none">
+    <div className="flex flex-col gap-5 p-3 sm:p-5 pb-32 overflow-y-auto h-full select-none">
       {/* ============================================================ */}
       {/* TOP HEADER: // YOUR LIBRARY + SEARCH BAR */}
       {/* ============================================================ */}
@@ -1109,18 +1174,21 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
                 return (
                   <div
                     key={card.id}
-                    className="group flex flex-col p-2 rounded-[2px] cursor-pointer transition-all duration-150 relative"
+                    className="group flex flex-col p-2 rounded-[2px] cursor-pointer transition-all duration-150 relative hover:border-[#22C55E]"
                     style={{
                       backgroundColor: "#070D17",
                       border: "1px solid #142236",
                     }}
                     onClick={() => {
                       if (soundFX) playChime("click");
-                      if (card.id === "pin-liked" && likedTracks.length > 0) {
-                        playTracks(likedTracks.map((t) => t.uri));
+                      if (card.id === "pin-liked") {
+                        setActiveCategory("liked");
+                      } else if (card.id === "pin-create") {
+                        const name = prompt("Enter new playlist name:");
+                        if (name) alert(`Playlist "${name}" created on PixelFM!`);
                       } else {
-                        // Play demo mix
-                        playTracks(["spotify:track:4cOdK2wGLETKBW3PvgPWqT"]);
+                        const matching = playlists.find((p) => p.id === card.id);
+                        openPlaylist(card.id, matching);
                       }
                     }}
                   >
@@ -1160,61 +1228,66 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
                       <span className="font-mono text-[11px] font-semibold text-[#F8FAFC] group-hover:text-[#22C55E] transition-colors truncate">
                         {card.name}
                       </span>
-                      <span className="font-mono text-[9px] text-[#64748B] mt-0.5">
-                        {songs} songs
-                      </span>
+                      {card.id !== "pin-create" && (
+                        <span className="font-mono text-[9px] text-[#64748B] mt-0.5">
+                          {songs} songs
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
 
-              {/* 6th Card: Create Playlist */}
-              <div
-                className="group flex flex-col p-2 rounded-[2px] cursor-pointer transition-all duration-150 relative border-dashed hover:border-[#22C55E]"
-                style={{
-                  backgroundColor: "#070D17",
-                  border: "1px dashed #1E293B",
-                }}
-                onClick={() => {
-                  if (soundFX) playChime("click");
-                  const name = prompt("Enter new playlist name:");
-                  if (name) alert(`Playlist "${name}" created on PixelFM!`);
-                }}
-              >
-                <div className="relative w-full aspect-square rounded-[2px] bg-[#090E17] border border-[#162235] mb-2 flex items-center justify-center text-2xl text-[#64748B] group-hover:text-[#22C55E] transition-colors">
-                  +
+              {/* In demo mode if pin-create isn't in filteredPinned */}
+              {!filteredPinned.some((c) => c.id === "pin-create") && !query && (
+                <div
+                  className="group flex flex-col p-2 rounded-[2px] cursor-pointer transition-all duration-150 relative border-dashed hover:border-[#22C55E]"
+                  style={{
+                    backgroundColor: "#070D17",
+                    border: "1px dashed #1E293B",
+                  }}
+                  onClick={() => {
+                    if (soundFX) playChime("click");
+                    const name = prompt("Enter new playlist name:");
+                    if (name) alert(`Playlist "${name}" created on PixelFM!`);
+                  }}
+                >
+                  <div className="relative w-full aspect-square rounded-[2px] bg-[#090E17] border border-[#162235] mb-2 flex items-center justify-center text-2xl text-[#64748B] group-hover:text-[#22C55E] transition-colors">
+                    +
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-mono text-[11px] font-semibold text-[#64748B] group-hover:text-[#22C55E] transition-colors truncate">
+                      Create Playlist
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-mono text-[11px] font-semibold text-[#64748B] group-hover:text-[#22C55E] transition-colors truncate">
-                    Create Playlist
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* SECTION 2: ALL PLAYLISTS (2-COLUMN COMPACT LIST) */}
+          {/* SECTION 2: ALL PLAYLISTS (2-COLUMN COMPACT LIST OR GRID) */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="font-pixel text-[8px] text-[#22C55E]">≡</span>
               <span className="font-pixel text-[8px] text-[#94A3B8] tracking-wider">
-                All Playlists
+                All Playlists ({filteredPlaylists.length})
               </span>
             </div>
 
-            {/* 2-Column Structured List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {/* 2-Column Structured List / Grid */}
+            <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-2.5" : "flex flex-col gap-2"}>
               {filteredPlaylists.map((pl) => (
                 <div
                   key={pl.id}
-                  className="group flex items-center justify-between p-2 rounded-[2px] cursor-pointer transition-all duration-150"
+                  className="group flex items-center justify-between p-2 rounded-[2px] cursor-pointer transition-all duration-150 hover:border-[#22C55E]"
                   style={{
                     backgroundColor: "#070D17",
                     border: "1px solid #142236",
                   }}
                   onClick={() => {
                     if (soundFX) playChime("click");
-                    playTracks(["spotify:track:4cOdK2wGLETKBW3PvgPWqT"]);
+                    const matching = playlists.find((p) => p.id === pl.id);
+                    openPlaylist(pl.id, matching);
                   }}
                 >
                   {/* Left: Thumbnail + Title + Songs */}
@@ -1255,10 +1328,11 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (soundFX) playChime("click");
-                        alert(`Playlist Options for ${pl.name}`);
+                        const matching = playlists.find((p) => p.id === pl.id);
+                        openPlaylist(pl.id, matching);
                       }}
                       className="text-[#64748B] hover:text-[#22C55E] px-1 text-sm font-bold transition-colors"
-                      title="More Options"
+                      title="View Details"
                     >
                       ⋮
                     </button>
@@ -1282,7 +1356,7 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
               style={{ backgroundColor: "#070D17" }}
               onClick={() => {
                 if (soundFX) playChime("click");
-                playContext(artist.uri);
+                openArtist(artist.id, artist);
               }}
             >
               <div className="w-16 h-16 rounded-full overflow-hidden border border-[#162235] group-hover:border-[#22C55E] transition-all">
@@ -1296,7 +1370,7 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
                   />
                 ) : (
                   <div className="w-full h-full bg-[#162032] flex items-center justify-center text-xl">
-                    🎙
+                    👤
                   </div>
                 )}
               </div>
@@ -1320,7 +1394,7 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
               style={{ backgroundColor: "#070D17" }}
               onClick={() => {
                 if (soundFX) playChime("click");
-                playContext(album.uri);
+                openAlbum(album.id, album);
               }}
             >
               <div className="relative w-full aspect-square bg-[#0A0F17] border border-[#162235] flex items-center justify-center overflow-hidden">
@@ -1336,7 +1410,7 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
                   <span className="text-2xl">💽</span>
                 )}
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <span className="font-pixel text-xs text-[#22C55E]">▶ PLAY</span>
+                  <span className="font-pixel text-xs text-[#22C55E]">▶ VIEW</span>
                 </div>
               </div>
               <div className="flex flex-col min-w-0">
@@ -1362,7 +1436,9 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
             }}
             onClick={() => {
               if (soundFX) playChime("click");
-              playTracks(likedTracks.map((t) => t.uri));
+              if (likedTracks.length > 0) {
+                playTrack(likedTracks[0], likedTracks);
+              }
             }}
           >
             <div className="flex items-center gap-3">
@@ -1382,13 +1458,13 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {likedTracks.slice(0, 20).map((track, idx) => (
+            {likedTracks.slice(0, 50).map((track, idx) => (
               <div
                 key={track.id}
                 className="flex items-center gap-3 p-2 cursor-pointer hover:bg-[#0B1320] border border-[#142236] hover:border-[#22C55E] transition-all rounded-[2px]"
                 onClick={() => {
                   if (soundFX) playChime("click");
-                  playTracks([track.uri]);
+                  playTrack(track, likedTracks);
                 }}
               >
                 <span className="font-mono text-[10px] text-[#64748B] w-5 text-right">
@@ -1434,36 +1510,61 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
 }
 
 function SearchView({ soundFX }: { soundFX: boolean }) {
-  const { searchQuery, setSearchQuery, runSearch, searchResults, isSearching, clearSearch } =
-    useMusicData();
-  const { playTracks, playContext } = usePlayer();
+  const {
+    searchQuery,
+    setSearchQuery,
+    runSearch,
+    searchResults,
+    isSearching,
+    clearSearch,
+    openPlaylist,
+    openAlbum,
+    openArtist,
+  } = useMusicData();
+  const { playTrack } = usePlayer();
   const [inputValue, setInputValue] = useState(searchQuery);
+  const [activeFilter, setActiveFilter] = useState<"all" | "tracks" | "artists" | "albums" | "playlists">("all");
+
+  // Debounced auto-search
+  useEffect(() => {
+    if (!inputValue.trim()) return;
+    const timer = setTimeout(() => {
+      runSearch(inputValue);
+      setSearchQuery(inputValue);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [inputValue, runSearch, setSearchQuery]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (soundFX) playChime("click");
-    runSearch(inputValue);
-    setSearchQuery(inputValue);
+    if (inputValue.trim()) {
+      runSearch(inputValue);
+      setSearchQuery(inputValue);
+    }
   };
 
   return (
-    <div className="flex flex-col gap-4 p-3 sm:p-4 pb-28 md:pb-6 overflow-y-auto h-full">
+    <div className="flex flex-col gap-4 p-3 sm:p-5 pb-32 overflow-y-auto h-full select-none">
+      {/* Search Header Form */}
       <form onSubmit={handleSearch} className="flex gap-2">
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="SEARCH ARTIST, SONG, OR PLAYLIST..."
-          className="flex-1 font-mono-retro"
+        <div
+          className="flex-1 flex items-center gap-2 px-3 py-2 rounded-[2px]"
           style={{
-            backgroundColor: "var(--color-void)",
-            border: "2px solid var(--color-elevated)",
-            padding: "8px 12px",
-            fontSize: 12,
-            color: "var(--color-text-primary)",
-            outline: "none",
+            backgroundColor: "#070E1A",
+            border: "1px solid #16253B",
           }}
-        />
+        >
+          <span className="text-xs text-[#64748B]">🔍</span>
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Search tracks, artists, albums, or playlists..."
+            className="w-full bg-transparent font-mono text-xs text-[#E2E8F0] placeholder-[#475569] outline-none"
+          />
+        </div>
+
         <button
           type="submit"
           className="btn-pixel btn-pixel-phosphor"
@@ -1472,7 +1573,8 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
         >
           {isSearching ? "..." : "SEARCH"}
         </button>
-        {searchResults && (
+
+        {inputValue && (
           <button
             type="button"
             className="btn-pixel"
@@ -1487,45 +1589,77 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
         )}
       </form>
 
-      <div className="overflow-y-auto flex-1">
+      {/* Category Filter Chips */}
+      {searchResults && (
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          {[
+            { id: "all", label: "ALL" },
+            { id: "tracks", label: `TRACKS (${searchResults.tracks.length})` },
+            { id: "artists", label: `ARTISTS (${searchResults.artists.length})` },
+            { id: "albums", label: `ALBUMS (${searchResults.albums.length})` },
+            { id: "playlists", label: `PLAYLISTS (${searchResults.playlists.length})` },
+          ].map((chip) => (
+            <button
+              key={chip.id}
+              onClick={() => {
+                if (soundFX) playChime("click");
+                setActiveFilter(chip.id as typeof activeFilter);
+              }}
+              className="font-pixel text-[7px] px-2.5 py-1 rounded-[2px] transition-all whitespace-nowrap"
+              style={{
+                border: activeFilter === chip.id ? "1px solid #22C55E" : "1px solid #142236",
+                backgroundColor: activeFilter === chip.id ? "rgba(34, 197, 94, 0.12)" : "#070E1A",
+                color: activeFilter === chip.id ? "#22C55E" : "#64748B",
+              }}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Results Container */}
+      <div className="flex-1 overflow-y-auto flex flex-col gap-6">
         {searchResults && (
           <>
-            {searchResults.tracks.length > 0 && (
-              <div className="mb-6">
-                <div
-                  className="font-pixel text-[8px] text-[var(--color-amber)] mb-2 pb-1"
-                  style={{ borderBottom: "1px solid var(--color-border)" }}
-                >
+            {/* Tracks */}
+            {(activeFilter === "all" || activeFilter === "tracks") && searchResults.tracks.length > 0 && (
+              <div>
+                <div className="font-pixel text-[8px] text-[#22C55E] mb-2 pb-1 border-b border-[#142236]">
                   TRACKS ({searchResults.tracks.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {searchResults.tracks.map((track) => (
                     <div
                       key={track.id}
-                      className="flex items-center gap-3 p-2 cursor-pointer hover:bg-[var(--color-surface)] border border-transparent hover:border-[var(--color-elevated)] transition-all"
+                      className="flex items-center gap-3 p-2 cursor-pointer hover:bg-[#070E1A] border border-transparent hover:border-[#22C55E]/40 transition-all rounded-[2px] group"
                       onClick={() => {
                         if (soundFX) playChime("click");
-                        playTracks([track.uri]);
+                        playTrack(track, searchResults.tracks);
                       }}
                     >
-                      {track.album?.images?.[0]?.url && (
+                      {track.album?.images?.[0]?.url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={track.album.images[0].url}
                           alt=""
-                          className="w-10 h-10 object-cover flex-shrink-0"
-                          style={{ imageRendering: "pixelated", border: "1px solid var(--color-border)" }}
+                          className="w-10 h-10 object-cover flex-shrink-0 rounded-[2px]"
+                          style={{ imageRendering: "pixelated", border: "1px solid #142236" }}
                         />
+                      ) : (
+                        <div className="w-10 h-10 bg-[#0A0F17] flex items-center justify-center text-[#22C55E] text-sm flex-shrink-0 rounded-[2px]">
+                          ♫
+                        </div>
                       )}
                       <div className="flex flex-col min-w-0 flex-1">
-                        <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
+                        <span className="font-mono text-xs text-[#F8FAFC] group-hover:text-[#22C55E] truncate">
                           {track.name}
                         </span>
-                        <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)] truncate">
+                        <span className="font-mono text-[10px] text-[#64748B] truncate">
                           {track.artists?.map((a) => a?.name || "").filter(Boolean).join(", ") || "Unknown Artist"}
                         </span>
                       </div>
-                      <span className="btn-pixel" style={{ padding: "4px 8px", fontSize: 8, flexShrink: 0 }}>
+                      <span className="btn-pixel text-[#22C55E] border-[#22C55E]/40 group-hover:border-[#22C55E] text-[7px] px-2 py-1 flex-shrink-0">
                         ▶ PLAY
                       </span>
                     </div>
@@ -1534,22 +1668,63 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
               </div>
             )}
 
-            {searchResults.albums && searchResults.albums.length > 0 && (
-              <div className="mb-6">
-                <div
-                  className="font-pixel text-[8px] text-[var(--color-phosphor)] mb-2 pb-1"
-                  style={{ borderBottom: "1px solid var(--color-border)" }}
-                >
+            {/* Artists */}
+            {(activeFilter === "all" || activeFilter === "artists") && searchResults.artists.length > 0 && (
+              <div>
+                <div className="font-pixel text-[8px] text-[#38BDF8] mb-2 pb-1 border-b border-[#142236]">
+                  ARTISTS ({searchResults.artists.length})
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+                  {searchResults.artists.map((artist) => (
+                    <div
+                      key={artist.id}
+                      className="p-3 flex flex-col items-center gap-2 cursor-pointer hover:border-[#38BDF8] border border-[#142236] bg-[#070D17] transition-all rounded-[2px] group text-center"
+                      onClick={() => {
+                        if (soundFX) playChime("click");
+                        openArtist(artist.id, artist);
+                      }}
+                    >
+                      <div className="w-16 h-16 rounded-full overflow-hidden border border-[#162235] group-hover:border-[#38BDF8] transition-all">
+                        {artist.images?.[0]?.url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={artist.images[0].url}
+                            alt={artist.name}
+                            className="w-full h-full object-cover"
+                            style={{ imageRendering: "pixelated" }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-[#162032] flex items-center justify-center text-xl">
+                            👤
+                          </div>
+                        )}
+                      </div>
+                      <span className="font-mono text-xs text-[#F8FAFC] group-hover:text-[#38BDF8] truncate w-full">
+                        {artist.name}
+                      </span>
+                      <span className="font-pixel text-[6px] text-[#38BDF8]">
+                        VIEW ARTIST
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Albums */}
+            {(activeFilter === "all" || activeFilter === "albums") && searchResults.albums.length > 0 && (
+              <div>
+                <div className="font-pixel text-[8px] text-[#F59E0B] mb-2 pb-1 border-b border-[#142236]">
                   ALBUMS ({searchResults.albums.length})
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {searchResults.albums.map((album) => (
                     <div
                       key={album.id}
-                      className="card-pixel p-2 flex items-center gap-2 cursor-pointer hover:border-[var(--color-phosphor)] transition-all"
+                      className="p-2 flex items-center gap-2.5 cursor-pointer border border-[#142236] hover:border-[#F59E0B] bg-[#070D17] transition-all rounded-[2px] group"
                       onClick={() => {
                         if (soundFX) playChime("click");
-                        playContext(album.uri);
+                        openAlbum(album.id, album);
                       }}
                     >
                       {album.images?.[0]?.url && (
@@ -1557,15 +1732,15 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
                         <img
                           src={album.images[0].url}
                           alt=""
-                          className="w-10 h-10 object-cover flex-shrink-0"
+                          className="w-11 h-11 object-cover flex-shrink-0 rounded-[2px]"
                           style={{ imageRendering: "pixelated" }}
                         />
                       )}
                       <div className="flex flex-col min-w-0">
-                        <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
+                        <span className="font-mono text-xs text-[#F8FAFC] group-hover:text-[#F59E0B] truncate">
                           {album.name}
                         </span>
-                        <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)] truncate">
+                        <span className="font-mono text-[9px] text-[#64748B] truncate">
                           {album.artists?.[0]?.name}
                         </span>
                       </div>
@@ -1575,22 +1750,20 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
               </div>
             )}
 
-            {searchResults.playlists.length > 0 && (
+            {/* Playlists */}
+            {(activeFilter === "all" || activeFilter === "playlists") && searchResults.playlists.length > 0 && (
               <div>
-                <div
-                  className="font-pixel text-[8px] text-[var(--color-amber)] mb-2 pb-1"
-                  style={{ borderBottom: "1px solid var(--color-border)" }}
-                >
+                <div className="font-pixel text-[8px] text-[#EC4899] mb-2 pb-1 border-b border-[#142236]">
                   PLAYLISTS ({searchResults.playlists.length})
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {searchResults.playlists.map((pl) => (
                     <div
                       key={pl.id}
-                      className="card-pixel p-2 flex items-center gap-2 cursor-pointer hover:border-[var(--color-phosphor)] transition-all"
+                      className="p-2 flex items-center gap-2.5 cursor-pointer border border-[#142236] hover:border-[#EC4899] bg-[#070D17] transition-all rounded-[2px] group"
                       onClick={() => {
                         if (soundFX) playChime("click");
-                        playContext(pl.uri);
+                        openPlaylist(pl.id, pl);
                       }}
                     >
                       {pl.images?.[0]?.url && (
@@ -1598,15 +1771,15 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
                         <img
                           src={pl.images[0].url}
                           alt=""
-                          className="w-10 h-10 object-cover flex-shrink-0"
+                          className="w-11 h-11 object-cover flex-shrink-0 rounded-[2px]"
                           style={{ imageRendering: "pixelated" }}
                         />
                       )}
                       <div className="flex flex-col min-w-0">
-                        <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
+                        <span className="font-mono text-xs text-[#F8FAFC] group-hover:text-[#EC4899] truncate">
                           {pl.name}
                         </span>
-                        <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)]">
+                        <span className="font-mono text-[9px] text-[#64748B]">
                           {pl.tracks?.total ?? 0} tracks
                         </span>
                       </div>
@@ -1618,21 +1791,22 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
           </>
         )}
 
+        {/* Empty state when no search yet */}
         {!searchResults && !isSearching && (
-          <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <span className="font-pixel text-[8px] text-[var(--color-text-dim)]">
-              TYPE AN ARTIST, ALBUM, OR SONG TO EXPLORE
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="font-pixel text-[8px] text-[#64748B]">
+              TYPE AN ARTIST, ALBUM, OR SONG TO EXPLORE SPOTIFY
             </span>
-            <div className="flex flex-wrap gap-2 justify-center">
+            <div className="flex flex-wrap gap-2 justify-center max-w-md">
               {["Daft Punk", "Lofi Beats", "Synthwave", "Cyberpunk", "City Pop", "Retrowave"].map((genre) => (
                 <button
                   key={genre}
                   onClick={() => {
                     setInputValue(genre);
                     runSearch(genre);
+                    setSearchQuery(genre);
                   }}
-                  className="btn-pixel"
-                  style={{ padding: "4px 8px", fontSize: 7 }}
+                  className="font-pixel text-[7px] px-3 py-1.5 bg-[#070E1A] border border-[#142236] text-[#94A3B8] hover:text-[#22C55E] hover:border-[#22C55E] rounded-[2px] transition-colors"
                 >
                   {genre}
                 </button>
@@ -1648,7 +1822,8 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
 export default function PlayerPage() {
   const router = useRouter();
   const { isAuthenticated, isDemoMode, isLoading } = useAuth();
-  const { currentTrack, isPaused, togglePlay } = usePlayer();
+  const { currentTrack } = usePlayer();
+  const { activeDetail, closeDetail, openAlbum } = useMusicData();
   const [crtEnabled, setCrtEnabled] = useState(true);
   const [soundFX, setSoundFX] = useState(true);
   const [currentView, setCurrentView] = useState<NavView>("home");
@@ -1674,20 +1849,59 @@ export default function PlayerPage() {
   }
 
   const renderMainContent = () => {
+    // 1. If an active detail view is open, render it first!
+    if (activeDetail) {
+      if (activeDetail.type === "playlist") {
+        return (
+          <PlaylistDetailView
+            playlistId={activeDetail.id}
+            initialPlaylist={activeDetail.data}
+            onBack={closeDetail}
+            soundFX={soundFX}
+          />
+        );
+      }
+      if (activeDetail.type === "album") {
+        return (
+          <AlbumDetailView
+            albumId={activeDetail.id}
+            initialAlbum={activeDetail.data}
+            onBack={closeDetail}
+            soundFX={soundFX}
+          />
+        );
+      }
+      if (activeDetail.type === "artist") {
+        return (
+          <ArtistDetailView
+            artistId={activeDetail.id}
+            initialArtist={activeDetail.data}
+            onBack={closeDetail}
+            soundFX={soundFX}
+            onSelectAlbum={(alb) => openAlbum(alb.id, alb)}
+          />
+        );
+      }
+    }
+
     switch (currentView) {
       case "library":
         return <LibraryView soundFX={soundFX} />;
       case "discover":
+        return <DiscoverView soundFX={soundFX} />;
       case "search":
         return <SearchView soundFX={soundFX} />;
       case "deck":
         return (
-          <div className="flex flex-col items-center gap-3 p-3 pb-28 overflow-y-auto h-full w-full">
+          <div className="flex flex-col items-center gap-3 p-3 pb-32 overflow-y-auto h-full w-full">
             <div className="w-full max-w-[380px]">
               <PixelCat />
             </div>
             <div className="w-full max-w-[380px]">
-              <NowPlayingDeck soundFX={soundFX} />
+              <NowPlayingDeck
+                soundFX={soundFX}
+                onClose={() => setCurrentView("library")}
+              />
             </div>
           </div>
         );
@@ -1728,7 +1942,10 @@ export default function PlayerPage() {
           {/* Sidebar: Desktop vertical rail + Mobile bottom dock */}
           <Sidebar
             currentView={currentView}
-            onNavigate={setCurrentView}
+            onNavigate={(v) => {
+              if (activeDetail) closeDetail();
+              setCurrentView(v);
+            }}
             soundFX={soundFX}
           />
 
@@ -1738,7 +1955,7 @@ export default function PlayerPage() {
             style={{ position: "relative" }}
           >
             <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-              {/* Center Panel (Home / Library / Search / Deck / Settings) */}
+              {/* Center Panel (Home / Library / Search / Discover / Detail / Settings) */}
               <div className="flex-1 overflow-hidden">
                 {renderMainContent()}
               </div>
@@ -1770,55 +1987,12 @@ export default function PlayerPage() {
           </div>
         </div>
 
-        {/* Mobile Sticky Mini-Player (floating above bottom dock when music is playing and not on deck view) */}
+        {/* Mobile Persistent Mini-Player (floating above bottom navigation dock) */}
         {currentTrack && currentView !== "deck" && (
-          <div
-            className="flex md:hidden items-center justify-between fixed bottom-[52px] left-2 right-2 z-40 p-2 rounded-[2px] cursor-pointer"
-            style={{
-              backgroundColor: "#070E17",
-              border: "1px solid #22C55E",
-              boxShadow: "0 0 14px rgba(34, 197, 94, 0.3), 0 4px 16px rgba(0,0,0,0.9)",
-            }}
-            onClick={() => {
-              if (soundFX) playChime("click");
-              setCurrentView("deck");
-            }}
-          >
-            <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-              {currentTrack.album?.images?.[0]?.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={currentTrack.album.images[0].url}
-                  alt=""
-                  className="w-8 h-8 rounded-[2px] object-cover flex-shrink-0"
-                  style={{ imageRendering: "pixelated" }}
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-[2px] bg-[#162032] flex items-center justify-center text-xs flex-shrink-0">
-                  ♫
-                </div>
-              )}
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="font-mono text-[11px] font-bold text-[#F8FAFC] truncate">
-                  {currentTrack.name}
-                </span>
-                <span className="font-mono text-[9px] text-[#94A3B8] truncate">
-                  {currentTrack.artists?.[0]?.name || "Unknown"}
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (soundFX) playChime("click");
-                togglePlay();
-              }}
-              className="w-8 h-8 rounded-[2px] bg-[#22C55E] flex items-center justify-center text-black font-bold text-sm shadow-md flex-shrink-0"
-            >
-              {isPaused ? "▶" : "⏸"}
-            </button>
-          </div>
+          <MiniPlayer
+            onOpenDeck={() => setCurrentView("deck")}
+            soundFX={soundFX}
+          />
         )}
       </div>
     </ErrorBoundary>

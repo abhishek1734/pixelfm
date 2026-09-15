@@ -36,6 +36,12 @@ interface SearchResults {
   albums: SpotifyAlbum[];
 }
 
+export type DetailViewTarget =
+  | { type: "playlist"; id: string; data?: SpotifyPlaylist }
+  | { type: "album"; id: string; data?: SpotifyAlbum }
+  | { type: "artist"; id: string; data?: SpotifyArtist }
+  | null;
+
 interface MusicDataContextValue {
   playlists: SpotifyPlaylist[];
   likedTracks: SpotifyTrack[];
@@ -55,6 +61,11 @@ interface MusicDataContextValue {
   clearSearch: () => void;
   refreshLibrary: () => Promise<void>;
   startRadio: (seedName: string) => Promise<SpotifyPlaylist | null>;
+  activeDetail: DetailViewTarget;
+  openPlaylist: (id: string, data?: SpotifyPlaylist) => void;
+  openAlbum: (id: string, data?: SpotifyAlbum) => void;
+  openArtist: (id: string, data?: SpotifyArtist) => void;
+  closeDetail: () => void;
 }
 
 const MusicDataContext = createContext<MusicDataContextValue | null>(null);
@@ -165,6 +176,24 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
     setSearchQuery("");
   }, []);
 
+  const [activeDetail, setActiveDetail] = useState<DetailViewTarget>(null);
+
+  const openPlaylist = useCallback((id: string, data?: SpotifyPlaylist) => {
+    setActiveDetail({ type: "playlist", id, data });
+  }, []);
+
+  const openAlbum = useCallback((id: string, data?: SpotifyAlbum) => {
+    setActiveDetail({ type: "album", id, data });
+  }, []);
+
+  const openArtist = useCallback((id: string, data?: SpotifyArtist) => {
+    setActiveDetail({ type: "artist", id, data });
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setActiveDetail(null);
+  }, []);
+
   return (
     <MusicDataContext.Provider
       value={{
@@ -186,6 +215,11 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
         clearSearch,
         refreshLibrary,
         startRadio,
+        activeDetail,
+        openPlaylist,
+        openAlbum,
+        openArtist,
+        closeDetail,
       }}
     >
       {children}

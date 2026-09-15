@@ -463,3 +463,113 @@ export async function getPlaylistTracks(
     return [];
   }
 }
+
+export async function getPlaylistDetails(
+  token: string,
+  playlistId: string
+): Promise<{
+  playlist: SpotifyPlaylist;
+  tracks: SpotifyTrack[];
+} | null> {
+  try {
+    const data = await spotifyFetch<SpotifyPlaylist & { tracks: { items: { track: SpotifyTrack }[]; total: number } }>(
+      `/playlists/${playlistId}`,
+      token
+    );
+    const tracks = (data?.tracks?.items ?? []).filter((i) => i && i.track).map((i) => i.track);
+    return {
+      playlist: {
+        id: data.id,
+        name: data.name || "Untitled Playlist",
+        description: data.description || "",
+        images: data.images || [],
+        tracks: { total: data.tracks?.total ?? tracks.length },
+        uri: data.uri,
+        owner: data.owner || { display_name: "Spotify" },
+        public: !!data.public,
+      },
+      tracks,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getAlbumDetails(
+  token: string,
+  albumId: string
+): Promise<{
+  album: SpotifyAlbum;
+  tracks: SpotifyTrack[];
+} | null> {
+  try {
+    const data = await spotifyFetch<SpotifyAlbum & { tracks: { items: SpotifyTrack[]; total: number } }>(
+      `/albums/${albumId}`,
+      token
+    );
+    const album: SpotifyAlbum = {
+      id: data.id,
+      name: data.name,
+      images: data.images || [],
+      artists: data.artists || [],
+      uri: data.uri,
+      release_date: data.release_date || "",
+      total_tracks: data.total_tracks || data.tracks?.total || 0,
+    };
+    const tracks = (data.tracks?.items ?? []).map((t) => ({
+      ...t,
+      album,
+    }));
+    return { album, tracks };
+  } catch {
+    return null;
+  }
+}
+
+export async function getArtistDetails(
+  token: string,
+  artistId: string
+): Promise<{
+  artist: SpotifyArtist;
+  topTracks: SpotifyTrack[];
+  albums: SpotifyAlbum[];
+} | null> {
+  try {
+    const [artistRes, tracksRes, albumsRes] = await Promise.allSettled([
+      spotifyFetch<SpotifyArtist>(`/artists/${artistId}`, token),
+      spotifyFetch<{ tracks: SpotifyTrack[] }>(`/artists/${artistId}/top-tracks?market=from_token`, token),
+      spotifyFetch<{ items: SpotifyAlbum[] }>(`/artists/${artistId}/albums?include_groups=album,single&limit=10`, token),
+    ]);
+
+    const artist = artistRes.status === "fulfilled" ? artistRes.value : null;
+    if (!artist) return null;
+
+    const topTracks = tracksRes.status === "fulfilled" ? (tracksRes.value?.tracks ?? []) : [];
+    const albums = albumsRes.status === "fulfilled" ? (albumsRes.value?.items ?? []) : [];
+
+    return { artist, topTracks, albums };
+  } catch {
+    return null;
+  }
+}
+
+export async function checkSavedTracks(
+  token: string,
+  trackIds: string[]
+): Promise<boolean[]> {
+  try {
+    if (!trackIds.length) return [];
+    return await spotifyFetch<boolean[]>(`/me/tracks/contains?ids=${trackIds.join(",")}`, token);
+  } catch {
+    return trackIds.map(() => false);
+  }
+}
+
+export async function saveTrack(token: string, trackId: string): Promise<void> {
+  await spotifyFetch<void>(`/me/tracks?ids=${trackId}`, token, { method: "PUT" });
+}
+
+export async function removeSavedTrack(token: string, trackId: string): Promise<void> {
+  await spotifyFetch<void>(`/me/tracks?ids=${trackId}`, token, { method: "DELETE" });
+}
+

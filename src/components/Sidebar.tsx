@@ -34,7 +34,7 @@ const MOBILE_NAV_ITEMS: NavItem[] = [
   { id: "home", label: "HOME", icon: "⌂" },
   { id: "library", label: "LIBRARY", icon: "♫" },
   { id: "search", label: "SEARCH", icon: "🔍" },
-  { id: "deck", label: "DECK", icon: "💽" },
+  { id: "discover", label: "DISCOVER", icon: "🎯" },
   { id: "settings", label: "CONFIG", icon: "⚙" },
 ];
 
