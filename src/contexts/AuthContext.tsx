@@ -21,17 +21,13 @@ import { getCurrentUserProfile, SpotifyUserProfile } from "@/lib/spotify";
 // Implements: https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow
 // ============================================================
 
-const CLIENT_ID =
-  process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ||
-  "1dad0d0aedab4da8b00150dd0853c7eb";
+const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "1dad0d0aedab4da8b00150dd0853c7eb";
 
-export function getEffectiveRedirectUri(): string {
-  if (typeof window !== "undefined" && window.location.origin) {
+export function getRedirectUri(): string {
+  if (typeof window !== "undefined") {
     return `${window.location.origin}/callback`;
   }
-  return (
-    process.env.NEXT_PUBLIC_REDIRECT_URI || "http://localhost:3000/callback"
-  );
+  return process.env.NEXT_PUBLIC_REDIRECT_URI || "http://localhost:3000/callback";
 }
 
 const SCOPES = [
@@ -169,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const verifier = generateCodeVerifier(64);
     const challenge = await generateCodeChallenge(verifier);
     const state = generateState(16);
-    const redirectUri = getEffectiveRedirectUri();
+    const redirectUri = getRedirectUri();
 
     localStorage.setItem("pkce_code_verifier", verifier);
     localStorage.setItem("pkce_state", state);
@@ -191,42 +187,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleCallback = useCallback(
     async (code: string, state: string) => {
-      // Guard against React StrictMode double-invocation
+      // Guard against double-invocation
       if (callbackCalledRef.current) return;
       callbackCalledRef.current = true;
 
       const storedState = localStorage.getItem("pkce_state");
       if (storedState && state && storedState !== state) {
-        console.warn("[Auth] State mismatch detected:", { storedState, state });
+        throw new Error(`State mismatch: expected "${storedState}", got "${state}"`);
       }
 
       const verifier = localStorage.getItem("pkce_code_verifier");
       if (!verifier) {
-        throw new Error("Code verifier missing from storage. Please click Connect Spotify again.");
+        throw new Error("PKCE code verifier missing from localStorage. Please retry logging in from the home screen.");
       }
 
-      const redirectUri =
-        localStorage.getItem("pkce_redirect_uri") || getEffectiveRedirectUri();
+      const redirectUri = localStorage.getItem("pkce_redirect_uri") || getRedirectUri();
 
-      console.log("[Auth] Exchanging code for token with redirectUri:", redirectUri);
+      const bodyParams = new URLSearchParams({
+        client_id: CLIENT_ID,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        code_verifier: verifier,
+      });
 
       const response = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: CLIENT_ID,
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: redirectUri,
-          code_verifier: verifier,
-        }).toString(),
+        body: bodyParams.toString(),
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        const message = err?.error_description || err?.error || `HTTP ${response.status}`;
-        console.error("[Auth] Token exchange failed from Spotify:", message, err);
-        throw new Error(message);
+        const errData = await response.json().catch(() => ({}));
+        const description = errData?.error_description || errData?.error || `HTTP ${response.status}`;
+        throw new Error(`Spotify rejected token exchange: ${description} (Redirect URI used: ${redirectUri})`);
       }
 
       const data = await response.json();

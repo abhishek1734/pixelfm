@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef, Suspense } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, getRedirectUri } from "@/contexts/AuthContext";
 
 // ============================================================
-// OAuth Callback Handler
+// OAuth Callback Handler with Diagnostic Error Display
 // ============================================================
 
 function CallbackInner() {
@@ -13,6 +13,13 @@ function CallbackInner() {
   const searchParams = useSearchParams();
   const { handleCallback, isAuthenticated } = useAuth();
   const handledRef = useRef(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<{
+    code: boolean;
+    state: boolean;
+    hasVerifier: boolean;
+    redirectUri: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -26,14 +33,29 @@ function CallbackInner() {
     const state = searchParams.get("state") ?? "";
     const error = searchParams.get("error");
 
+    const currentRedirect = typeof window !== "undefined"
+      ? (localStorage.getItem("pkce_redirect_uri") || getRedirectUri())
+      : "";
+    const verifier = typeof window !== "undefined"
+      ? localStorage.getItem("pkce_code_verifier")
+      : null;
+
+    setDebugInfo({
+      code: !!code,
+      state: !!state,
+      hasVerifier: !!verifier,
+      redirectUri: currentRedirect,
+    });
+
     if (error) {
-      console.error("[Callback] Spotify returned error param:", error);
-      router.replace("/?error=" + encodeURIComponent(error));
+      console.error("[Callback] Spotify returned error:", error);
+      setErrorMessage(`Spotify OAuth error: ${error}`);
       return;
     }
 
     if (!code) {
-      router.replace("/?error=missing_auth_code");
+      console.error("[Callback] No code found in callback query params");
+      setErrorMessage("No authorization code was returned by Spotify.");
       return;
     }
 
@@ -42,18 +64,79 @@ function CallbackInner() {
         router.replace("/player");
       })
       .catch((err) => {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error("[Callback] Token exchange error:", message);
-        router.replace("/?error=" + encodeURIComponent(message));
+        console.error("[Callback] Token exchange failed:", err);
+        setErrorMessage(err.message || "Failed to exchange authorization code for access token.");
       });
   }, [searchParams, handleCallback, router, isAuthenticated]);
+
+  if (errorMessage) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center min-h-screen p-4 bg-retro-grid"
+        style={{ backgroundColor: "var(--color-void)" }}
+      >
+        <div
+          className="card-pixel p-6 flex flex-col items-center gap-4 max-w-lg w-full text-center"
+          style={{
+            border: "2px solid #EF4444",
+            boxShadow: "0 0 20px rgba(239, 68, 68, 0.3)",
+          }}
+        >
+          <div
+            className="font-pixel text-xs"
+            style={{ color: "#EF4444", textShadow: "0 0 8px rgba(239, 68, 68, 0.6)" }}
+          >
+            ✖ AUTHENTICATION ERROR
+          </div>
+
+          <div
+            className="font-mono-retro text-xs p-3 w-full text-left"
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              border: "1px solid var(--color-border)",
+              color: "#FCA5A5",
+              wordBreak: "break-word",
+            }}
+          >
+            {errorMessage}
+          </div>
+
+          {debugInfo && (
+            <div
+              className="font-mono-retro text-[10px] w-full text-left p-2"
+              style={{
+                backgroundColor: "rgba(0, 0, 0, 0.3)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-dim)",
+              }}
+            >
+              <div>• Has Auth Code: {debugInfo.code ? "Yes ✓" : "No ✗"}</div>
+              <div>• PKCE Verifier in Storage: {debugInfo.hasVerifier ? "Yes ✓" : "Missing ✗"}</div>
+              <div>• Redirect URI: {debugInfo.redirectUri}</div>
+            </div>
+          )}
+
+          <div className="font-pixel text-[8px] text-[var(--color-text-dim)] leading-relaxed">
+            Ensure that <span style={{ color: "var(--color-phosphor)" }}>{debugInfo?.redirectUri}</span> is added to your Spotify Developer Dashboard under &quot;Redirect URIs&quot;.
+          </div>
+
+          <button
+            onClick={() => router.push("/")}
+            className="btn-pixel btn-pixel-phosphor mt-2"
+            style={{ padding: "8px 16px", fontSize: 8 }}
+          >
+            [ ↺ RETURN TO BOOT SCREEN ]
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
       className="flex flex-col items-center justify-center h-screen gap-6"
       style={{ backgroundColor: "var(--color-void)" }}
     >
-      {/* Spinner */}
       <div
         style={{
           width: 40,
@@ -100,10 +183,7 @@ export default function CallbackPage() {
       fallback={
         <div
           className="flex items-center justify-center h-screen"
-          style={{
-            backgroundColor: "var(--color-void)",
-            color: "var(--color-phosphor)",
-          }}
+          style={{ backgroundColor: "var(--color-void)", color: "var(--color-phosphor)" }}
         >
           <span className="font-pixel" style={{ fontSize: 9 }}>
             LOADING...
