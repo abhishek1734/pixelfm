@@ -34,6 +34,7 @@ interface MusicDataContextValue {
   likedTracks: SpotifyTrack[];
   recentlyPlayed: SpotifyTrack[];
   isLoadingLibrary: boolean;
+  libraryError: string | null;
   searchResults: SearchResults | null;
   isSearching: boolean;
   searchQuery: string;
@@ -51,6 +52,7 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
   const [likedTracks, setLikedTracks] = useState<SpotifyTrack[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<SpotifyTrack[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,17 +60,34 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
   const refreshLibrary = useCallback(async () => {
     if (!accessToken) return;
     setIsLoadingLibrary(true);
+    setLibraryError(null);
     try {
-      const [pl, liked, recent] = await Promise.all([
+      const [plRes, likedRes, recentRes] = await Promise.allSettled([
         getUserPlaylists(accessToken),
         getLikedTracks(accessToken).then((items) => items.map((i) => i.track)),
         getRecentlyPlayed(accessToken),
       ]);
-      setPlaylists(pl);
-      setLikedTracks(liked);
-      setRecentlyPlayed(recent);
-    } catch (err) {
+
+      if (plRes.status === "fulfilled") {
+        setPlaylists(plRes.value || []);
+      } else {
+        console.warn("[MusicData] Playlists failed:", plRes.reason);
+      }
+
+      if (likedRes.status === "fulfilled") {
+        setLikedTracks(likedRes.value || []);
+      } else {
+        console.warn("[MusicData] Liked tracks failed:", likedRes.reason);
+      }
+
+      if (recentRes.status === "fulfilled") {
+        setRecentlyPlayed(recentRes.value || []);
+      } else {
+        console.warn("[MusicData] Recently played failed:", recentRes.reason);
+      }
+    } catch (err: unknown) {
       console.error("[MusicData] Library fetch error:", err);
+      setLibraryError(err instanceof Error ? err.message : "Failed to load library");
     } finally {
       setIsLoadingLibrary(false);
     }
@@ -112,6 +131,7 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
         likedTracks,
         recentlyPlayed,
         isLoadingLibrary,
+        libraryError,
         searchResults,
         isSearching,
         searchQuery,

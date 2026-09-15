@@ -18,28 +18,257 @@ import SettingsPanel from "@/components/SettingsPanel";
 import { playChime } from "@/lib/audioEngine";
 
 // ============================================================
-// Main Player View
+// Main Player Views
 // ============================================================
 
 type NavView = "home" | "library" | "search" | "settings";
+
+function HomeView({
+  soundFX,
+  onNavigate,
+}: {
+  soundFX: boolean;
+  onNavigate: (v: NavView) => void;
+}) {
+  const { playlists, recentlyPlayed, likedTracks, isLoadingLibrary, refreshLibrary, libraryError } =
+    useMusicData();
+  const { playContext, playTracks, isReady, externalDevice } = usePlayer();
+
+  return (
+    <div className="flex flex-col gap-6 p-4 overflow-y-auto h-full">
+      {/* Device connection banner */}
+      <DeviceManager soundFX={soundFX} />
+
+      {/* Top Welcome / Status Bar */}
+      <div
+        className="flex items-center justify-between p-3"
+        style={{
+          backgroundColor: "var(--color-surface)",
+          border: "2px solid var(--color-elevated)",
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="led-dot"
+            style={{
+              width: 8,
+              height: 8,
+              backgroundColor: isReady ? "#22C55E" : externalDevice ? "#F59E0B" : "#334155",
+              boxShadow: isReady ? "0 0 6px #22C55E" : externalDevice ? "0 0 6px #F59E0B" : "none",
+            }}
+          />
+          <span className="font-pixel text-[9px] text-[var(--color-text-primary)]">
+            {isReady
+              ? "WEB STATION AUDIO READY"
+              : externalDevice
+              ? `CONNECT SYNC: ${externalDevice.device.name}`
+              : "SPOTIFY READY — SELECT MUSIC"}
+          </span>
+        </div>
+        <button
+          onClick={() => {
+            if (soundFX) playChime("click");
+            refreshLibrary();
+          }}
+          className="btn-pixel"
+          style={{ padding: "4px 8px", fontSize: 7 }}
+          title="Refresh Spotify Library"
+        >
+          {isLoadingLibrary ? "SYNCING..." : "↺ SYNC"}
+        </button>
+      </div>
+
+      {libraryError && (
+        <div
+          className="font-mono-retro text-xs p-2"
+          style={{
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            border: "1px solid #EF4444",
+            color: "#FCA5A5",
+          }}
+        >
+          Notice: {libraryError}
+        </div>
+      )}
+
+      {/* Quick Launch: Playlists */}
+      <div>
+        <div className="flex items-center justify-between mb-3 pb-1 border-b" style={{ borderColor: "var(--color-border)" }}>
+          <span className="font-pixel text-[8px] text-[var(--color-phosphor)] tracking-wider">
+            ♫ MY PLAYLISTS ({playlists.length})
+          </span>
+          <button
+            onClick={() => onNavigate("library")}
+            className="font-pixel text-[7px] text-[var(--color-text-dim)] hover:text-[var(--color-phosphor)]"
+          >
+            VIEW ALL ➔
+          </button>
+        </div>
+
+        {isLoadingLibrary && playlists.length === 0 ? (
+          <div className="font-pixel text-[8px] text-[var(--color-text-dim)] p-4 text-center animate-blink">
+            LOADING SPOTIFY PLAYLISTS...
+          </div>
+        ) : playlists.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {playlists.slice(0, 6).map((pl) => (
+              <div
+                key={pl.id}
+                className="card-pixel p-2.5 flex flex-col gap-2 cursor-pointer hover:border-[var(--color-phosphor)] transition-all group"
+                onClick={() => {
+                  if (soundFX) playChime("click");
+                  playContext(pl.uri);
+                }}
+              >
+                <div className="relative w-full aspect-square bg-[var(--color-void)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden">
+                  {pl.images?.[0]?.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={pl.images[0].url}
+                      alt={pl.name}
+                      className="w-full h-full object-cover"
+                      style={{ imageRendering: "pixelated" }}
+                    />
+                  ) : (
+                    <span className="text-2xl">♫</span>
+                  )}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <span className="font-pixel text-xs text-[var(--color-phosphor)]">▶ PLAY</span>
+                  </div>
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
+                    {pl.name}
+                  </span>
+                  <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)]">
+                    {pl.tracks.total} tracks
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            className="p-4 flex flex-col items-center gap-2 text-center"
+            style={{ backgroundColor: "var(--color-surface)", border: "1px dashed var(--color-border)" }}
+          >
+            <span className="font-pixel text-[8px] text-[var(--color-text-dim)]">
+              NO PLAYLISTS DETECTED ON ACCOUNT
+            </span>
+            <button
+              onClick={() => onNavigate("search")}
+              className="btn-pixel btn-pixel-phosphor mt-1"
+              style={{ padding: "6px 12px", fontSize: 8 }}
+            >
+              SEARCH SPOTIFY CATALOG ➔
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Liked Songs Quick Bar */}
+      {likedTracks.length > 0 && (
+        <div
+          className="p-3 flex items-center justify-between cursor-pointer hover:border-[var(--color-phosphor)] transition-all"
+          style={{
+            backgroundColor: "var(--color-surface)",
+            border: "2px solid var(--color-elevated)",
+          }}
+          onClick={() => {
+            if (soundFX) playChime("click");
+            playTracks(likedTracks.map((t) => t.uri));
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl text-[var(--color-pink)]">♥</span>
+            <div className="flex flex-col">
+              <span className="font-pixel text-[8px] text-[var(--color-text-primary)]">
+                LIKED SONGS COLLECTION
+              </span>
+              <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)]">
+                {likedTracks.length} tracks saved in your library
+              </span>
+            </div>
+          </div>
+          <span className="btn-pixel btn-pixel-phosphor" style={{ padding: "4px 10px", fontSize: 8 }}>
+            ▶ PLAY ALL
+          </span>
+        </div>
+      )}
+
+      {/* Recently Played List */}
+      <div>
+        <div className="flex items-center justify-between mb-3 pb-1 border-b" style={{ borderColor: "var(--color-border)" }}>
+          <span className="font-pixel text-[8px] text-[var(--color-amber)] tracking-wider">
+            ◉ RECENTLY PLAYED
+          </span>
+        </div>
+
+        {recentlyPlayed.length > 0 ? (
+          <div className="flex flex-col gap-1">
+            {recentlyPlayed.slice(0, 8).map((track, i) => (
+              <div
+                key={`${track.id}-${i}`}
+                className="flex items-center gap-3 p-2 cursor-pointer hover:bg-[var(--color-surface)] border border-transparent hover:border-[var(--color-elevated)] transition-all"
+                onClick={() => {
+                  if (soundFX) playChime("click");
+                  playTracks([track.uri]);
+                }}
+              >
+                {track.album?.images?.[0]?.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={track.album.images[0].url}
+                    alt=""
+                    className="w-9 h-9 object-cover flex-shrink-0"
+                    style={{ imageRendering: "pixelated", border: "1px solid var(--color-border)" }}
+                  />
+                ) : (
+                  <div className="w-9 h-9 bg-[var(--color-elevated)] flex items-center justify-center text-xs flex-shrink-0">
+                    ♪
+                  </div>
+                )}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
+                    {track.name}
+                  </span>
+                  <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)] truncate">
+                    {track.artists.map((a) => a.name).join(", ")}
+                  </span>
+                </div>
+                <span className="font-pixel text-[8px] text-[var(--color-phosphor)] flex-shrink-0">
+                  ▶
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="font-mono-retro text-[11px] text-[var(--color-text-dim)] p-2">
+            No recent listening history yet. Play any track or playlist above!
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function LibraryView({ soundFX }: { soundFX: boolean }) {
   const { playlists, likedTracks, isLoadingLibrary } = useMusicData();
   const { playContext, playTracks } = usePlayer();
 
-  if (isLoadingLibrary) {
+  if (isLoadingLibrary && playlists.length === 0 && likedTracks.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="font-pixel text-[9px] text-[var(--color-text-dim)] animate-blink">
-          LOADING LIBRARY...
+          LOADING SPOTIFY LIBRARY...
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 overflow-y-auto h-full">
-      {/* Liked Songs */}
+    <div className="flex flex-col gap-6 p-4 overflow-y-auto h-full">
+      {/* Liked Songs Banner */}
       <div>
         <div
           className="font-pixel text-[8px] text-[var(--color-phosphor)] mb-2 pb-1"
@@ -47,16 +276,22 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
         >
           ♥ LIKED SONGS ({likedTracks.length})
         </div>
-        <button
-          className="btn-pixel btn-pixel-phosphor w-full"
-          style={{ padding: "8px 16px", fontSize: 8, justifyContent: "center" }}
-          onClick={() => {
-            if (soundFX) playChime("click");
-            if (likedTracks.length > 0) playTracks(likedTracks.map((t) => t.uri));
-          }}
-        >
-          ▶ PLAY ALL LIKED SONGS
-        </button>
+        {likedTracks.length > 0 ? (
+          <button
+            className="btn-pixel btn-pixel-phosphor w-full"
+            style={{ padding: "8px 16px", fontSize: 8, justifyContent: "center" }}
+            onClick={() => {
+              if (soundFX) playChime("click");
+              playTracks(likedTracks.map((t) => t.uri));
+            }}
+          >
+            ▶ PLAY ALL {likedTracks.length} LIKED SONGS
+          </button>
+        ) : (
+          <div className="font-mono-retro text-xs text-[var(--color-text-dim)] p-2">
+            No liked songs found on this Spotify account.
+          </div>
+        )}
       </div>
 
       {/* Playlists */}
@@ -65,74 +300,80 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
           className="font-pixel text-[8px] text-[var(--color-phosphor)] mb-2 pb-1"
           style={{ borderBottom: "1px solid var(--color-border)" }}
         >
-          ♫ PLAYLISTS ({playlists.length})
+          ♫ ALL PLAYLISTS ({playlists.length})
         </div>
-        <div className="flex flex-col gap-1">
-          {playlists.map((pl) => (
-            <div
-              key={pl.id}
-              className="flex items-center gap-3 p-2 cursor-pointer transition-all"
-              style={{
-                backgroundColor: "var(--color-void)",
-                border: "1px solid var(--color-border)",
-              }}
-              onClick={() => {
-                if (soundFX) playChime("click");
-                playContext(pl.uri);
-              }}
-            >
-              {pl.images?.[0]?.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={pl.images[0].url}
-                  alt={pl.name}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    imageRendering: "pixelated",
-                    border: "1px solid var(--color-border)",
-                    flexShrink: 0,
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    backgroundColor: "var(--color-elevated)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 18,
-                    flexShrink: 0,
-                  }}
-                >
-                  ♫
+        {playlists.length === 0 ? (
+          <div className="font-mono-retro text-xs text-[var(--color-text-dim)] p-2">
+            No playlists found. Create one in Spotify or search below!
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {playlists.map((pl) => (
+              <div
+                key={pl.id}
+                className="flex items-center gap-3 p-2 cursor-pointer transition-all hover:border-[var(--color-phosphor)]"
+                style={{
+                  backgroundColor: "var(--color-void)",
+                  border: "1px solid var(--color-border)",
+                }}
+                onClick={() => {
+                  if (soundFX) playChime("click");
+                  playContext(pl.uri);
+                }}
+              >
+                {pl.images?.[0]?.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pl.images[0].url}
+                    alt={pl.name}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      imageRendering: "pixelated",
+                      border: "1px solid var(--color-border)",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      backgroundColor: "var(--color-elevated)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 18,
+                      flexShrink: 0,
+                    }}
+                  >
+                    ♫
+                  </div>
+                )}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span
+                    className="font-mono-retro truncate"
+                    style={{ fontSize: 12, color: "var(--color-text-primary)" }}
+                  >
+                    {pl.name}
+                  </span>
+                  <span
+                    className="font-mono-retro"
+                    style={{ fontSize: 10, color: "var(--color-text-dim)" }}
+                  >
+                    {pl.tracks.total} tracks · {pl.owner?.display_name || "Spotify"}
+                  </span>
                 </div>
-              )}
-              <div className="flex flex-col min-w-0">
                 <span
-                  className="font-mono-retro truncate"
-                  style={{ fontSize: 12, color: "var(--color-text-primary)" }}
+                  className="font-pixel"
+                  style={{ fontSize: 10, color: "var(--color-phosphor)", flexShrink: 0 }}
                 >
-                  {pl.name}
-                </span>
-                <span
-                  className="font-mono-retro"
-                  style={{ fontSize: 10, color: "var(--color-text-dim)" }}
-                >
-                  {pl.tracks.total} tracks · {pl.owner.display_name}
+                  ▶
                 </span>
               </div>
-              <span
-                className="ml-auto font-pixel"
-                style={{ fontSize: 10, color: "var(--color-text-dim)", flexShrink: 0 }}
-              >
-                ▶
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -141,7 +382,7 @@ function LibraryView({ soundFX }: { soundFX: boolean }) {
 function SearchView({ soundFX }: { soundFX: boolean }) {
   const { searchQuery, setSearchQuery, runSearch, searchResults, isSearching, clearSearch } =
     useMusicData();
-  const { playTracks } = usePlayer();
+  const { playTracks, playContext } = usePlayer();
   const [inputValue, setInputValue] = useState(searchQuery);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -158,7 +399,7 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="SEARCH SPOTIFY..."
+          placeholder="SEARCH ARTIST, SONG, OR PLAYLIST..."
           className="flex-1 font-mono-retro"
           style={{
             backgroundColor: "var(--color-void)",
@@ -175,16 +416,19 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
           style={{ padding: "8px 16px", fontSize: 8 }}
           disabled={isSearching}
         >
-          {isSearching ? "..." : "GO"}
+          {isSearching ? "..." : "SEARCH"}
         </button>
         {searchResults && (
           <button
             type="button"
             className="btn-pixel"
-            onClick={() => { clearSearch(); setInputValue(""); }}
+            onClick={() => {
+              clearSearch();
+              setInputValue("");
+            }}
             style={{ padding: "8px 12px", fontSize: 8 }}
           >
-            ✗
+            ✕
           </button>
         )}
       </form>
@@ -193,48 +437,47 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
         {searchResults && (
           <>
             {searchResults.tracks.length > 0 && (
-              <div className="mb-4">
+              <div className="mb-6">
                 <div
                   className="font-pixel text-[8px] text-[var(--color-amber)] mb-2 pb-1"
                   style={{ borderBottom: "1px solid var(--color-border)" }}
                 >
-                  TRACKS
+                  TRACKS ({searchResults.tracks.length})
                 </div>
-                {searchResults.tracks.slice(0, 10).map((track) => (
-                  <div
-                    key={track.id}
-                    className="flex items-center gap-3 p-2 cursor-pointer"
-                    style={{
-                      borderBottom: "1px solid var(--color-border)",
-                    }}
-                    onDoubleClick={() => playTracks([track.uri])}
-                    onClick={() => { if (soundFX) playChime("click"); }}
-                  >
-                    {track.album.images?.[0]?.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={track.album.images[0].url}
-                        alt=""
-                        style={{ width: 36, height: 36, imageRendering: "pixelated", flexShrink: 0 }}
-                      />
-                    )}
-                    <div className="flex flex-col min-w-0">
-                      <span style={{ fontSize: 12, color: "var(--color-text-primary)", fontFamily: "var(--font-mono)" }} className="truncate">
-                        {track.name}
-                      </span>
-                      <span style={{ fontSize: 10, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
-                        {track.artists.map((a) => a.name).join(", ")}
+                <div className="flex flex-col gap-1">
+                  {searchResults.tracks.map((track) => (
+                    <div
+                      key={track.id}
+                      className="flex items-center gap-3 p-2 cursor-pointer hover:bg-[var(--color-surface)] border border-transparent hover:border-[var(--color-elevated)] transition-all"
+                      onDoubleClick={() => playTracks([track.uri])}
+                      onClick={() => {
+                        if (soundFX) playChime("click");
+                        playTracks([track.uri]);
+                      }}
+                    >
+                      {track.album?.images?.[0]?.url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={track.album.images[0].url}
+                          alt=""
+                          className="w-10 h-10 object-cover flex-shrink-0"
+                          style={{ imageRendering: "pixelated", border: "1px solid var(--color-border)" }}
+                        />
+                      )}
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
+                          {track.name}
+                        </span>
+                        <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)] truncate">
+                          {track.artists.map((a) => a.name).join(", ")}
+                        </span>
+                      </div>
+                      <span className="btn-pixel" style={{ padding: "4px 8px", fontSize: 8, flexShrink: 0 }}>
+                        ▶ PLAY
                       </span>
                     </div>
-                    <button
-                      className="ml-auto btn-pixel"
-                      style={{ padding: "4px 8px", fontSize: 9, flexShrink: 0 }}
-                      onClick={(e) => { e.stopPropagation(); playTracks([track.uri]); }}
-                    >
-                      ▶
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
 
@@ -244,38 +487,63 @@ function SearchView({ soundFX }: { soundFX: boolean }) {
                   className="font-pixel text-[8px] text-[var(--color-amber)] mb-2 pb-1"
                   style={{ borderBottom: "1px solid var(--color-border)" }}
                 >
-                  PLAYLISTS
+                  PLAYLISTS ({searchResults.playlists.length})
                 </div>
-                {searchResults.playlists.slice(0, 6).map((pl) => (
-                  <div
-                    key={pl.id}
-                    className="flex items-center gap-3 p-2 cursor-pointer"
-                    style={{ borderBottom: "1px solid var(--color-border)" }}
-                  >
-                    {pl.images?.[0]?.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={pl.images[0].url} alt="" style={{ width: 36, height: 36, imageRendering: "pixelated", flexShrink: 0 }} />
-                    )}
-                    <div className="flex flex-col min-w-0">
-                      <span style={{ fontSize: 12, color: "var(--color-text-primary)", fontFamily: "var(--font-mono)" }} className="truncate">
-                        {pl.name}
-                      </span>
-                      <span style={{ fontSize: 10, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
-                        {pl.tracks.total} tracks
-                      </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {searchResults.playlists.map((pl) => (
+                    <div
+                      key={pl.id}
+                      className="card-pixel p-2 flex items-center gap-2 cursor-pointer hover:border-[var(--color-phosphor)] transition-all"
+                      onClick={() => {
+                        if (soundFX) playChime("click");
+                        playContext(pl.uri);
+                      }}
+                    >
+                      {pl.images?.[0]?.url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={pl.images[0].url}
+                          alt=""
+                          className="w-10 h-10 object-cover flex-shrink-0"
+                          style={{ imageRendering: "pixelated" }}
+                        />
+                      )}
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-mono-retro text-xs text-[var(--color-text-primary)] truncate">
+                          {pl.name}
+                        </span>
+                        <span className="font-mono-retro text-[10px] text-[var(--color-text-dim)]">
+                          {pl.tracks.total} tracks
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </>
         )}
 
         {!searchResults && !isSearching && (
-          <div className="flex items-center justify-center h-32">
+          <div className="flex flex-col items-center justify-center h-48 gap-3">
             <span className="font-pixel text-[8px] text-[var(--color-text-dim)]">
-              SEARCH THE SPOTIFY CATALOG
+              TYPE AN ARTIST, ALBUM, OR SONG TO EXPLORE
             </span>
+            <div className="flex gap-2">
+              {["Daft Punk", "Lofi Beats", "Synthwave", "Cyberpunk"].map((genre) => (
+                <button
+                  key={genre}
+                  onClick={() => {
+                    setInputValue(genre);
+                    runSearch(genre);
+                  }}
+                  className="btn-pixel"
+                  style={{ padding: "4px 8px", fontSize: 7 }}
+                >
+                  {genre}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -326,20 +594,7 @@ export default function PlayerPage() {
           />
         );
       default: // home
-        return (
-          <div className="flex flex-col items-center justify-center h-full gap-6 p-4">
-            {/* Device Transfer Banner */}
-            <DeviceManager soundFX={soundFX} />
-
-            {/* Recently played heading */}
-            <div
-              className="font-pixel text-[8px] text-[var(--color-text-dim)] w-full"
-              style={{ maxWidth: 400 }}
-            >
-              ◉ NOW PLAYING
-            </div>
-          </div>
-        );
+        return <HomeView soundFX={soundFX} onNavigate={setCurrentView} />;
     }
   };
 
@@ -354,11 +609,14 @@ export default function PlayerPage() {
         {/* Top Bar */}
         <TopBar
           crtEnabled={crtEnabled}
-          onToggleCRT={() => { if (soundFX) playChime("click"); setCrtEnabled((v) => !v); }}
+          onToggleCRT={() => {
+            if (soundFX) playChime("click");
+            setCrtEnabled((v) => !v);
+          }}
           soundFX={soundFX}
         />
 
-        {/* Main area */}
+        {/* Main Station Layout */}
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
           <Sidebar
@@ -367,23 +625,23 @@ export default function PlayerPage() {
             soundFX={soundFX}
           />
 
-          {/* Center content area */}
+          {/* Center + Right Deck */}
           <div
             className="flex-1 overflow-hidden flex flex-col"
             style={{ position: "relative" }}
           >
-            {/* Main scrollable area */}
-            <div className="flex-1 overflow-hidden flex">
-              {/* Left: Content panel */}
+            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+              {/* Center Panel (Home / Library / Search / Settings) */}
               <div className="flex-1 overflow-hidden">
                 {renderMainContent()}
               </div>
 
-              {/* Right: Now Playing + Cat */}
+              {/* Right Panel: Cat + Now Playing Deck */}
               <div
                 className="flex flex-col items-center justify-start gap-4 p-4 overflow-y-auto"
                 style={{
-                  width: 420,
+                  width: "100%",
+                  maxWidth: 420,
                   minWidth: 320,
                   borderLeft: "2px solid var(--color-elevated)",
                   backgroundColor: "var(--color-surface)",
@@ -392,7 +650,7 @@ export default function PlayerPage() {
               >
                 {/* Pixel Cat */}
                 <div
-                  className="w-full flex items-center justify-center py-3"
+                  className="w-full flex items-center justify-center py-2"
                   style={{
                     borderBottom: "1px solid var(--color-border)",
                   }}
@@ -400,17 +658,12 @@ export default function PlayerPage() {
                   <PixelCat />
                 </div>
 
-                {/* Device Manager banner (compact) */}
-                <div className="w-full">
-                  <DeviceManager soundFX={soundFX} />
-                </div>
-
                 {/* Now Playing Deck */}
                 <NowPlayingDeck soundFX={soundFX} />
               </div>
             </div>
 
-            {/* Queue Drawer */}
+            {/* Collapsible Queue Drawer */}
             <QueueDrawer soundFX={soundFX} />
           </div>
         </div>

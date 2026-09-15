@@ -122,13 +122,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const [isReady, setIsReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(true);
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [sdkPaused, setSdkPaused] = useState(true);
+  const [sdkPosition, setSdkPosition] = useState(0);
+  const [sdkDuration, setSdkDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.7);
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatModeState] = useState<0 | 1 | 2>(0);
-  const [currentTrack, setCurrentTrack] = useState<SpotifyTrack | null>(null);
+  const [sdkTrack, setSdkTrack] = useState<SpotifyTrack | null>(null);
   const [externalDevice, setExternalDevice] = useState<SpotifyPlaybackState | null>(null);
   const [soundFXEnabled, setSoundFXEnabled] = useState(true);
 
@@ -168,15 +168,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       player.addListener("player_state_changed", (state: unknown) => {
         if (!state) return;
         const s = state as WebPlaybackState;
-        setIsPaused(s.paused);
-        setPosition(s.position);
-        setDuration(s.duration);
+        setSdkPaused(s.paused);
+        setSdkPosition(s.position);
+        setSdkDuration(s.duration);
         setShuffle(s.shuffle);
         setRepeatModeState(s.repeat_mode);
 
         const t = s.track_window?.current_track;
         if (t) {
-          setCurrentTrack({
+          setSdkTrack({
             id: t.id,
             name: t.name,
             uri: t.uri,
@@ -228,67 +228,92 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // Position ticker
   useEffect(() => {
-    if (isPaused || !isReady) return;
+    if (sdkPaused || !isReady) return;
     const id = setInterval(() => {
-      setPosition((p) => (p + 500 < duration ? p + 500 : p));
+      setSdkPosition((p) => (p + 500 < sdkDuration ? p + 500 : p));
     }, 500);
     return () => clearInterval(id);
-  }, [isPaused, isReady, duration]);
+  }, [sdkPaused, isReady, sdkDuration]);
 
-  // Poll for external Spotify Connect state (when not our device)
+  // Poll for Spotify playback state (syncs whatever is playing anywhere)
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
     const poll = async () => {
       const state = await getPlaybackState(accessToken);
-      if (state && state.device.id !== deviceId) {
-        setExternalDevice(state);
+      if (state) {
+        if (!isReady || !sdkTrack || state.device.id !== deviceId) {
+          setExternalDevice(state);
+        } else {
+          setExternalDevice(null);
+        }
       } else {
         setExternalDevice(null);
       }
     };
     poll();
-    const id = setInterval(poll, 5000);
+    const id = setInterval(poll, 3000);
     return () => clearInterval(id);
-  }, [isAuthenticated, accessToken, deviceId]);
+  }, [isAuthenticated, accessToken, deviceId, isReady, sdkTrack]);
+
+  // Effective state: uses SDK if actively loaded, otherwise falls back to currently active Connect device
+  const currentTrack = sdkTrack || externalDevice?.item || null;
+  const isPaused = sdkTrack ? sdkPaused : (externalDevice ? !externalDevice.is_playing : true);
+  const position = sdkTrack ? sdkPosition : (externalDevice?.progress_ms ?? 0);
+  const duration = sdkTrack ? sdkDuration : (externalDevice?.item?.duration_ms ?? 0);
 
   const togglePlay = useCallback(async () => {
-    if (playerRef.current) {
-      await playerRef.current.activateElement(); // required for mobile autoplay
+    if (playerRef.current && isReady && sdkTrack) {
+      await playerRef.current.activateElement();
       await playerRef.current.togglePlay();
-    } else if (accessToken && deviceId) {
-      if (isPaused) await startPlayback(accessToken, deviceId);
-      else await pausePlayback(accessToken, deviceId);
+    } else if (accessToken) {
+      if (isPaused) {
+        await startPlayback(accessToken, deviceId || undefined);
+      } else {
+        await pausePlayback(accessToken, deviceId || undefined);
+      }
     }
-  }, [accessToken, deviceId, isPaused]);
+  }, [accessToken, deviceId, isPaused, isReady, sdkTrack]);
 
   const seek = useCallback(
     async (positionMs: number) => {
-      if (playerRef.current) await playerRef.current.seek(positionMs);
-      else if (accessToken) await seekToPosition(accessToken, positionMs);
-      setPosition(positionMs);
+      if (playerRef.current && sdkTrack) {
+        await playerRef.current.seek(positionMs);
+      } else if (accessToken) {
+        await seekToPosition(accessToken, positionMs);
+      }
+      setSdkPosition(positionMs);
     },
-    [accessToken]
+    [accessToken, sdkTrack]
   );
 
   const next = useCallback(async () => {
-    if (playerRef.current) await playerRef.current.nextTrack();
-    else if (accessToken) await skipToNext(accessToken);
+    if (playerRef.current && sdkTrack) {
+      await playerRef.current.nextTrack();
+    } else if (accessToken) {
+      await skipToNext(accessToken);
+    }
     if (soundFXEnabled) playTrackSwitch();
-  }, [accessToken, soundFXEnabled]);
+  }, [accessToken, sdkTrack, soundFXEnabled]);
 
   const previous = useCallback(async () => {
-    if (playerRef.current) await playerRef.current.previousTrack();
-    else if (accessToken) await skipToPrevious(accessToken);
+    if (playerRef.current && sdkTrack) {
+      await playerRef.current.previousTrack();
+    } else if (accessToken) {
+      await skipToPrevious(accessToken);
+    }
     if (soundFXEnabled) playTrackSwitch();
-  }, [accessToken, soundFXEnabled]);
+  }, [accessToken, sdkTrack, soundFXEnabled]);
 
   const setPlayerVolume = useCallback(
     async (vol: number) => {
       setVolumeState(vol);
-      if (playerRef.current) await playerRef.current.setVolume(vol);
-      else if (accessToken) await setVolume(accessToken, vol * 100);
+      if (playerRef.current && isReady) {
+        await playerRef.current.setVolume(vol);
+      } else if (accessToken) {
+        await setVolume(accessToken, vol * 100);
+      }
     },
-    [accessToken]
+    [accessToken, isReady]
   );
 
   const toggleShuffle = useCallback(async () => {
@@ -300,9 +325,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const cycleRepeat = useCallback(async () => {
     const modes: ("off" | "context" | "track")[] = ["off", "context", "track"];
     const modeMap: Record<0 | 1 | 2, 0 | 1 | 2> = { 0: 1, 1: 2, 2: 0 };
-    const next = modeMap[repeatMode];
-    setRepeatModeState(next);
-    if (accessToken) await setRepeatMode(accessToken, modes[next]);
+    const nextMode = modeMap[repeatMode];
+    setRepeatModeState(nextMode);
+    if (accessToken) await setRepeatMode(accessToken, modes[nextMode]);
   }, [accessToken, repeatMode]);
 
   const transferToTab = useCallback(async () => {
@@ -314,16 +339,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playContext = useCallback(
     async (contextUri: string, offset = 0) => {
-      if (!accessToken || !deviceId) return;
-      await startPlayback(accessToken, deviceId, contextUri, undefined, offset);
+      if (!accessToken) return;
+      await startPlayback(accessToken, deviceId || undefined, contextUri, undefined, offset);
     },
     [accessToken, deviceId]
   );
 
   const playTracks = useCallback(
     async (uris: string[], offset = 0) => {
-      if (!accessToken || !deviceId) return;
-      await startPlayback(accessToken, deviceId, undefined, uris, offset);
+      if (!accessToken) return;
+      await startPlayback(accessToken, deviceId || undefined, undefined, uris, offset);
     },
     [accessToken, deviceId]
   );
