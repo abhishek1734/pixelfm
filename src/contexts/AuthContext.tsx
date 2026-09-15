@@ -42,6 +42,7 @@ const SCOPES = [
   "user-read-recently-played",
   "playlist-read-private",
   "playlist-read-collaborative",
+  "user-top-read",
 ].join(" ");
 
 interface AuthTokens {

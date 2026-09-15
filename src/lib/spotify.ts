@@ -17,6 +17,8 @@ export interface SpotifyArtist {
   name: string;
   uri: string;
   external_urls: { spotify: string };
+  images?: SpotifyImage[];
+  genres?: string[];
 }
 
 export interface SpotifyAlbum {
@@ -26,6 +28,7 @@ export interface SpotifyAlbum {
   artists: SpotifyArtist[];
   uri: string;
   release_date: string;
+  total_tracks?: number;
 }
 
 export interface SpotifyTrack {
@@ -92,6 +95,11 @@ export interface SpotifyUserProfile {
 export interface SavedTrack {
   added_at: string;
   track: SpotifyTrack;
+}
+
+export interface SavedAlbum {
+  added_at: string;
+  album: SpotifyAlbum;
 }
 
 export interface SpotifyQueue {
@@ -265,7 +273,7 @@ export async function getQueue(token: string): Promise<SpotifyQueue | null> {
   }
 }
 
-// ---- User API ----
+// ---- User Profile & Library ----
 
 export async function getCurrentUserProfile(
   token: string
@@ -312,9 +320,31 @@ export async function getLikedTracks(
   }
 }
 
+export async function getUserAlbums(
+  token: string,
+  limit = 50
+): Promise<SpotifyAlbum[]> {
+  try {
+    const data = await spotifyFetch<{ items: SavedAlbum[] }>(
+      `/me/albums?limit=${limit}`,
+      token
+    );
+    return (data?.items ?? [])
+      .filter((i) => i && i.album)
+      .map((i) => ({
+        ...i.album,
+        name: i.album.name || "Untitled Album",
+        images: i.album.images || [],
+        artists: i.album.artists || [],
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export async function getRecentlyPlayed(
   token: string,
-  limit = 20
+  limit = 30
 ): Promise<SpotifyTrack[]> {
   try {
     const data = await spotifyFetch<{ items: { track: SpotifyTrack }[] }>(
@@ -329,15 +359,87 @@ export async function getRecentlyPlayed(
   }
 }
 
+// ---- Personalized Top Content ----
+
+export async function getTopTracks(
+  token: string,
+  limit = 20,
+  timeRange = "short_term"
+): Promise<SpotifyTrack[]> {
+  try {
+    const data = await spotifyFetch<{ items: SpotifyTrack[] }>(
+      `/me/top/tracks?limit=${limit}&time_range=${timeRange}`,
+      token
+    );
+    return (data?.items ?? []).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export async function getTopArtists(
+  token: string,
+  limit = 12
+): Promise<SpotifyArtist[]> {
+  try {
+    const data = await spotifyFetch<{ items: SpotifyArtist[] }>(
+      `/me/top/artists?limit=${limit}`,
+      token
+    );
+    return (data?.items ?? []).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+// ---- Browse & Featured ----
+
+export async function getFeaturedPlaylists(
+  token: string,
+  limit = 20
+): Promise<SpotifyPlaylist[]> {
+  try {
+    const data = await spotifyFetch<{
+      playlists?: { items: SpotifyPlaylist[] };
+    }>(`/browse/featured-playlists?limit=${limit}`, token);
+    return (data?.playlists?.items ?? [])
+      .filter(Boolean)
+      .map((p) => ({
+        ...p,
+        name: p.name || "Featured Playlist",
+        images: p.images || [],
+        tracks: p.tracks || { total: 0 },
+        owner: p.owner || { display_name: "Spotify" },
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getNewReleases(
+  token: string,
+  limit = 20
+): Promise<SpotifyAlbum[]> {
+  try {
+    const data = await spotifyFetch<{
+      albums?: { items: SpotifyAlbum[] };
+    }>(`/browse/new-releases?limit=${limit}`, token);
+    return (data?.albums?.items ?? []).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export async function searchSpotify(
   token: string,
   query: string,
-  types: string[] = ["track", "artist", "playlist"],
+  types: string[] = ["track", "artist", "playlist", "album"],
   limit = 20
 ): Promise<{
   tracks?: { items: SpotifyTrack[] };
   artists?: { items: SpotifyArtist[] };
   playlists?: { items: SpotifyPlaylist[] };
+  albums?: { items: SpotifyAlbum[] };
 }> {
   const params = new URLSearchParams({
     q: query,

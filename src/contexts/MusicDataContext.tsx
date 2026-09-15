@@ -13,26 +13,38 @@ import {
   SpotifyPlaylist,
   SpotifyTrack,
   SpotifyArtist,
+  SpotifyAlbum,
   getUserPlaylists,
   getLikedTracks,
+  getUserAlbums,
   getRecentlyPlayed,
+  getTopTracks,
+  getTopArtists,
+  getFeaturedPlaylists,
+  getNewReleases,
   searchSpotify,
 } from "@/lib/spotify";
 
 // ============================================================
-// Music Data Context — Library, Search, Recently Played
+// Music Data Context — Full Personalized Spotify Dashboard
 // ============================================================
 
 interface SearchResults {
   tracks: SpotifyTrack[];
   artists: SpotifyArtist[];
   playlists: SpotifyPlaylist[];
+  albums: SpotifyAlbum[];
 }
 
 interface MusicDataContextValue {
   playlists: SpotifyPlaylist[];
   likedTracks: SpotifyTrack[];
+  albums: SpotifyAlbum[];
   recentlyPlayed: SpotifyTrack[];
+  topTracks: SpotifyTrack[];
+  topArtists: SpotifyArtist[];
+  featuredPlaylists: SpotifyPlaylist[];
+  newReleases: SpotifyAlbum[];
   isLoadingLibrary: boolean;
   libraryError: string | null;
   searchResults: SearchResults | null;
@@ -42,6 +54,7 @@ interface MusicDataContextValue {
   runSearch: (q: string) => Promise<void>;
   clearSearch: () => void;
   refreshLibrary: () => Promise<void>;
+  startRadio: (seedName: string) => Promise<SpotifyPlaylist | null>;
 }
 
 const MusicDataContext = createContext<MusicDataContextValue | null>(null);
@@ -50,7 +63,13 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
   const { accessToken, isAuthenticated } = useAuth();
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [likedTracks, setLikedTracks] = useState<SpotifyTrack[]>([]);
+  const [albums, setAlbums] = useState<SpotifyAlbum[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<SpotifyTrack[]>([]);
+  const [topTracks, setTopTracks] = useState<SpotifyTrack[]>([]);
+  const [topArtists, setTopArtists] = useState<SpotifyArtist[]>([]);
+  const [featuredPlaylists, setFeaturedPlaylists] = useState<SpotifyPlaylist[]>([]);
+  const [newReleases, setNewReleases] = useState<SpotifyAlbum[]>([]);
+
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
@@ -62,29 +81,34 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
     setIsLoadingLibrary(true);
     setLibraryError(null);
     try {
-      const [plRes, likedRes, recentRes] = await Promise.allSettled([
+      const [
+        plRes,
+        likedRes,
+        albumsRes,
+        recentRes,
+        topTracksRes,
+        topArtistsRes,
+        featuredRes,
+        newReleasesRes,
+      ] = await Promise.allSettled([
         getUserPlaylists(accessToken),
         getLikedTracks(accessToken).then((items) => items.map((i) => i.track)),
+        getUserAlbums(accessToken),
         getRecentlyPlayed(accessToken),
+        getTopTracks(accessToken, 20, "short_term"),
+        getTopArtists(accessToken, 12),
+        getFeaturedPlaylists(accessToken, 12),
+        getNewReleases(accessToken, 12),
       ]);
 
-      if (plRes.status === "fulfilled") {
-        setPlaylists(plRes.value || []);
-      } else {
-        console.warn("[MusicData] Playlists failed:", plRes.reason);
-      }
-
-      if (likedRes.status === "fulfilled") {
-        setLikedTracks(likedRes.value || []);
-      } else {
-        console.warn("[MusicData] Liked tracks failed:", likedRes.reason);
-      }
-
-      if (recentRes.status === "fulfilled") {
-        setRecentlyPlayed(recentRes.value || []);
-      } else {
-        console.warn("[MusicData] Recently played failed:", recentRes.reason);
-      }
+      if (plRes.status === "fulfilled") setPlaylists(plRes.value || []);
+      if (likedRes.status === "fulfilled") setLikedTracks(likedRes.value || []);
+      if (albumsRes.status === "fulfilled") setAlbums(albumsRes.value || []);
+      if (recentRes.status === "fulfilled") setRecentlyPlayed(recentRes.value || []);
+      if (topTracksRes.status === "fulfilled") setTopTracks(topTracksRes.value || []);
+      if (topArtistsRes.status === "fulfilled") setTopArtists(topArtistsRes.value || []);
+      if (featuredRes.status === "fulfilled") setFeaturedPlaylists(featuredRes.value || []);
+      if (newReleasesRes.status === "fulfilled") setNewReleases(newReleasesRes.value || []);
     } catch (err: unknown) {
       console.error("[MusicData] Library fetch error:", err);
       setLibraryError(err instanceof Error ? err.message : "Failed to load library");
@@ -109,11 +133,28 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
           tracks: results.tracks?.items ?? [],
           artists: results.artists?.items ?? [],
           playlists: results.playlists?.items ?? [],
+          albums: results.albums?.items ?? [],
         });
       } catch (err) {
         console.error("[MusicData] Search error:", err);
       } finally {
         setIsSearching(false);
+      }
+    },
+    [accessToken]
+  );
+
+  const startRadio = useCallback(
+    async (seedName: string): Promise<SpotifyPlaylist | null> => {
+      if (!accessToken || !seedName.trim()) return null;
+      try {
+        const query = `${seedName} Radio`;
+        const res = await searchSpotify(accessToken, query, ["playlist"], 5);
+        const radioPl = res.playlists?.items?.[0] || null;
+        return radioPl;
+      } catch (err) {
+        console.error("[MusicData] Radio generation error:", err);
+        return null;
       }
     },
     [accessToken]
@@ -129,7 +170,12 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
       value={{
         playlists,
         likedTracks,
+        albums,
         recentlyPlayed,
+        topTracks,
+        topArtists,
+        featuredPlaylists,
+        newReleases,
         isLoadingLibrary,
         libraryError,
         searchResults,
@@ -139,6 +185,7 @@ export function MusicDataProvider({ children }: { children: ReactNode }) {
         runSearch,
         clearSearch,
         refreshLibrary,
+        startRadio,
       }}
     >
       {children}
