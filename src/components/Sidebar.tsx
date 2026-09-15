@@ -117,6 +117,40 @@ export default function Sidebar({ currentView, onNavigate, soundFX }: SidebarPro
           })}
         </div>
 
+        {/* Pixel Art Banner: Cat on fence with "Good Music Brighter Days." */}
+        <div className="px-2 my-2 flex flex-col items-center">
+          <div
+            className="w-full rounded-[2px] overflow-hidden p-1.5 flex flex-col items-center text-center relative"
+            style={{
+              backgroundColor: "#070E1A",
+              border: "1px solid #142236",
+            }}
+          >
+            {/* Night Sky + Cat Silhouette */}
+            <div
+              className="w-full h-12 rounded-[2px] mb-1 relative overflow-hidden flex items-end justify-center"
+              style={{
+                background: "linear-gradient(180deg, #1E1B4B 0%, #312E81 50%, #0F172A 100%)",
+              }}
+            >
+              {/* Distant skyline buildings */}
+              <div className="absolute bottom-0 left-1 w-2 h-4 bg-[#0A0D18]" />
+              <div className="absolute bottom-0 left-3.5 w-3 h-6 bg-[#0E1322]" />
+              <div className="absolute bottom-0 right-1 w-2.5 h-5 bg-[#0A0D18]" />
+              {/* Stars */}
+              <div className="absolute top-1 left-2 w-0.5 h-0.5 bg-white opacity-80" />
+              <div className="absolute top-2.5 right-2 w-0.5 h-0.5 bg-white opacity-90" />
+              {/* Cat Silhouette */}
+              <div className="relative z-10 text-[13px] leading-none mb-0.5 select-none" style={{ filter: "drop-shadow(0 0 2px #000)" }}>
+                🐈
+              </div>
+            </div>
+            <span className="font-pixel text-[5px] text-[#94A3B8] leading-tight">
+              Good Music<br />Brighter Days.
+            </span>
+          </div>
+        </div>
+
         {/* Bottom: DISC indicator */}
         <div className="flex flex-col items-center gap-1 pb-1">
           <div
