@@ -1826,7 +1826,7 @@ export default function PlayerPage() {
   const { isAuthenticated, isDemoMode, isLoading } = useAuth();
   const { currentTrack } = usePlayer();
   const { activeDetail, closeDetail, openAlbum } = useMusicData();
-  const [crtEnabled, setCrtEnabled] = useState(true);
+  const [crtEnabled, setCrtEnabled] = useState(false);
   const [soundFX, setSoundFX] = useState(true);
   const [currentView, setCurrentView] = useState<NavView>("home");
 
@@ -1986,7 +1986,10 @@ export default function PlayerPage() {
                 )}
 
                 {/* Now Playing Deck Module with screws */}
-                <NowPlayingDeck soundFX={soundFX} />
+                <NowPlayingDeck
+                  soundFX={soundFX}
+                  showSpectrum={currentView === "library" || currentView === "search"}
+                />
               </div>
             </div>
 

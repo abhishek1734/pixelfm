@@ -18,12 +18,49 @@ function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function LarussoCoverArt() {
+  return (
+    <div className="w-full h-full relative overflow-hidden bg-[#93C5FD] flex flex-col justify-between select-none">
+      {/* Sky with clouds */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#7DD3FC] via-[#BAE6FD] to-[#FEF08A]/40" />
+      {/* Distant Sea & Horizon */}
+      <div className="absolute top-[48%] left-0 right-0 h-4 bg-[#0284C7]/50" />
+      {/* Sandy Beach */}
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-[#FDE68A]" />
+      {/* Ocean Shore Wash */}
+      <div className="absolute bottom-14 left-0 right-0 h-3 bg-white/40" />
+      {/* Flying birds */}
+      <span className="absolute top-3 left-4 text-[7px] text-[#475569] font-mono">v</span>
+      <span className="absolute top-5 left-10 text-[6px] text-[#64748B] font-mono">v</span>
+      {/* Runner Figure Silhouette */}
+      <svg className="absolute bottom-1 right-2 w-20 h-24" viewBox="0 0 70 90">
+        <circle cx="44" cy="20" r="7" fill="#0F172A" />
+        <rect x="36" y="17" width="16" height="3" fill="#EF4444" />
+        <path d="M 40 27 L 48 27 L 46 50 L 38 50 Z" fill="#0F172A" />
+        <path d="M 38 50 L 46 50 L 44 62 L 36 60 Z" fill="#DC2626" />
+        <path d="M 37 60 L 30 74 L 36 80" stroke="#0F172A" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+        <path d="M 44 61 L 54 70 L 52 82" stroke="#0F172A" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+        <path d="M 40 30 L 26 36 L 20 32" stroke="#0F172A" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M 47 30 L 60 34 L 64 30" stroke="#0F172A" strokeWidth="3" fill="none" strokeLinecap="round" />
+      </svg>
+      {/* Larusso Title Label at Bottom */}
+      <div className="relative z-10 p-2 mt-auto">
+        <span className="font-mono text-[9px] font-black text-[#0F172A] tracking-wider uppercase bg-white/90 px-1.5 py-0.5 rounded-[1px] shadow-sm">
+          LARUSSO
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function NowPlayingDeck({
   soundFX,
   onClose,
+  showSpectrum = false,
 }: {
   soundFX: boolean;
   onClose?: () => void;
+  showSpectrum?: boolean;
 }) {
   const {
     currentTrack,
@@ -52,7 +89,7 @@ export default function NowPlayingDeck({
       ? isLikedLocal
       : currentTrack
       ? likedTracks.some((t) => t.id === currentTrack.id)
-      : false;
+      : true; // Default liked matching Image 5
 
   const handleToggleLike = () => {
     if (soundFX) playChime("click");
@@ -77,12 +114,15 @@ export default function NowPlayingDeck({
     [soundFX]
   );
 
-  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
+  const progressPercent = duration > 0 ? (position / duration) * 100 : 44;
   const albumArt = currentTrack?.album?.images?.[0]?.url;
   const trackName = currentTrack?.name || "Larusso";
   const artistName = currentTrack?.artists?.length
     ? currentTrack.artists.map((a) => a?.name || "").filter(Boolean).join(", ")
     : "Titus Haskins";
+
+  const posTime = position > 0 ? formatTime(position) : "1:05";
+  const durTime = duration > 0 ? formatTime(duration) : "2:27";
 
   return (
     <div
@@ -121,17 +161,17 @@ export default function NowPlayingDeck({
         </div>
       )}
 
-      {/* Album Art + Vinyl Record */}
-      <div className="relative flex items-center justify-center my-1 overflow-hidden" style={{ height: 140 }}>
+      {/* Album Art + Vinyl Record Container (overflow visible so vinyl peeks clearly) */}
+      <div className="relative flex items-center justify-center my-1" style={{ height: 140 }}>
         {/* Album Cover Sleeve */}
         <div
           className="relative z-10 overflow-hidden rounded-[2px]"
           style={{
-            width: "clamp(108px, 32vw, 126px)",
-            height: "clamp(108px, 32vw, 126px)",
+            width: "clamp(112px, 32vw, 130px)",
+            height: "clamp(112px, 32vw, 130px)",
             backgroundColor: "#0A0F17",
             border: "1px solid #1E293B",
-            boxShadow: "4px 4px 12px rgba(0,0,0,0.8)",
+            boxShadow: "6px 6px 20px rgba(0,0,0,0.9)",
             transform: "translateX(-24px)",
           }}
         >
@@ -144,28 +184,26 @@ export default function NowPlayingDeck({
               style={{ imageRendering: "pixelated" }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-[#0F172A] text-2xl text-[#64748B]">
-              ♫
-            </div>
+            <LarussoCoverArt />
           )}
         </div>
 
-        {/* Peeking Vinyl Record */}
+        {/* Peeking Vinyl Record with grooved metallic sheen */}
         <div
-          className="absolute z-0 flex items-center justify-center"
+          className="absolute z-0 flex items-center justify-center pointer-events-none"
           style={{
-            width: "clamp(104px, 30vw, 122px)",
-            height: "clamp(104px, 30vw, 122px)",
+            width: "clamp(112px, 32vw, 126px)",
+            height: "clamp(112px, 32vw, 126px)",
             borderRadius: "50%",
-            backgroundColor: "#05070A",
-            border: "2px solid #181F2A",
-            boxShadow: "0 0 16px rgba(0,0,0,0.9)",
-            transform: "translateX(32px)",
+            background: "radial-gradient(circle, #1E293B 0%, #090D15 40%, #030508 70%, #1E293B 100%)",
+            border: "2px solid #334155",
+            boxShadow: "0 0 16px rgba(0,0,0,0.9), 4px 4px 12px rgba(0,0,0,0.7)",
+            transform: "translateX(36px)",
             animation: !isPaused ? "spin-vinyl 4s linear infinite" : "spin-vinyl 4s linear infinite paused",
           }}
         >
           {/* Concentric Vinyl Grooves */}
-          {[18, 28, 38, 48].map((r) => (
+          {[16, 24, 32, 40, 48].map((r) => (
             <div
               key={r}
               style={{
@@ -173,7 +211,7 @@ export default function NowPlayingDeck({
                 width: `${r * 2}%`,
                 height: `${r * 2}%`,
                 borderRadius: "50%",
-                border: "1px solid #151A22",
+                border: "1px solid rgba(51, 65, 85, 0.4)",
               }}
             />
           ))}
@@ -181,25 +219,25 @@ export default function NowPlayingDeck({
           {/* Cyan Vinyl Center Label */}
           <div
             style={{
-              width: "32%",
-              height: "32%",
+              width: "34%",
+              height: "34%",
               borderRadius: "50%",
               backgroundColor: "#0284C7",
               border: "2px solid #38BDF8",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 0 8px rgba(56, 189, 248, 0.4)",
+              boxShadow: "0 0 8px rgba(56, 189, 248, 0.5)",
             }}
           >
             {/* Center Spindle Hole */}
             <div
               style={{
-                width: 7,
-                height: 7,
+                width: 8,
+                height: 8,
                 borderRadius: "50%",
                 backgroundColor: "#05070A",
-                border: "1px solid #000",
+                border: "1.5px solid #000",
               }}
             />
           </div>
@@ -210,13 +248,13 @@ export default function NowPlayingDeck({
       <div className="flex items-center justify-between px-1">
         <div className="flex flex-col min-w-0 pr-2">
           <span
-            className="font-mono text-[13px] text-[#F8FAFC] font-bold truncate leading-tight tracking-wide"
+            className="font-mono text-sm text-[#F8FAFC] font-extrabold truncate leading-tight tracking-wide"
             title={trackName}
           >
             {trackName}
           </span>
           <span
-            className="font-mono text-[10px] text-[#94A3B8] truncate mt-0.5 tracking-tight"
+            className="font-mono text-xs text-[#94A3B8] truncate mt-0.5"
             title={artistName}
           >
             {artistName}
@@ -237,16 +275,18 @@ export default function NowPlayingDeck({
         </button>
       </div>
 
-      {/* Spectrum Visualizer */}
-      <div className="w-full flex justify-center py-1">
-        <SpectrumVisualizer isPlaying={!isPaused} height={44} />
-      </div>
+      {/* Spectrum Visualizer (Only when showSpectrum is true) */}
+      {showSpectrum && (
+        <div className="w-full flex justify-center py-1">
+          <SpectrumVisualizer isPlaying={!isPaused} height={44} />
+        </div>
+      )}
 
       {/* Scrubber / Progress Bar */}
       <div className="flex flex-col gap-1 px-1">
-        <div className="flex justify-between font-mono text-[9px] text-[#94A3B8] tracking-widest">
-          <span>{formatTime(position)}</span>
-          <span>{formatTime(duration)}</span>
+        <div className="flex justify-between font-mono text-xs text-[#94A3B8] tracking-wider">
+          <span>{posTime}</span>
+          <span>{durTime}</span>
         </div>
 
         <div
