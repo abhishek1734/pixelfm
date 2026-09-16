@@ -17,6 +17,8 @@ import SettingsPanel from "@/components/SettingsPanel";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import MiniPlayer from "@/components/MiniPlayer";
 import DiscoverView from "@/components/views/DiscoverView";
+import HomeViewTab from "@/components/views/HomeView";
+import SearchViewTab from "@/components/views/SearchView";
 import PlaylistDetailView from "@/components/views/PlaylistDetailView";
 import AlbumDetailView from "@/components/views/AlbumDetailView";
 import ArtistDetailView from "@/components/views/ArtistDetailView";
@@ -1890,7 +1892,7 @@ export default function PlayerPage() {
       case "discover":
         return <DiscoverView soundFX={soundFX} />;
       case "search":
-        return <SearchView soundFX={soundFX} />;
+        return <SearchViewTab soundFX={soundFX} />;
       case "deck":
         return (
           <div className="flex flex-col items-center gap-3 p-3 pb-32 overflow-y-auto h-full w-full">
@@ -1915,7 +1917,7 @@ export default function PlayerPage() {
           />
         );
       default: // home
-        return <HomeView soundFX={soundFX} onNavigate={setCurrentView} />;
+        return <HomeViewTab soundFX={soundFX} onNavigate={setCurrentView} />;
     }
   };
 
@@ -1972,8 +1974,16 @@ export default function PlayerPage() {
                   flexShrink: 0,
                 }}
               >
-                {/* Pixel Cat Module with screws */}
-                <PixelCat />
+                {/* In Settings & Home, the mockup does NOT show the PixelCat in the right deck (Settings has cat at top-right of page, Home has cat in night skyline banner) */}
+                {currentView !== "settings" && currentView !== "home" && (
+                  <PixelCat
+                    speechLines={
+                      currentView === "discover"
+                        ? ["DISCOVER", "MORE", "GOOD MUSIC", "TODAY. ♪"]
+                        : ["MUSIC", "MAKES A", "BETTER DAY."]
+                    }
+                  />
+                )}
 
                 {/* Now Playing Deck Module with screws */}
                 <NowPlayingDeck soundFX={soundFX} />

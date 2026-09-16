@@ -20,6 +20,8 @@ const CAT_COLORS = {
   nose: "#EC4899",
   inner_ear: "#EC4899",
   whisker: "#E2E8F0",
+  headphones: "#22C55E",
+  headband: "#15803D",
 };
 
 interface PixelProps {
@@ -63,13 +65,15 @@ const O = CAT_COLORS.outline;
 const G = CAT_COLORS.eyes;
 const N = CAT_COLORS.nose;
 const I = CAT_COLORS.inner_ear;
+const H = CAT_COLORS.headphones;
+const HD = CAT_COLORS.headband;
 
-// Cat pixel grid (12x14)
+// Cat pixel grid (12x14) with green headphones
 const CAT_PIXELS_AWAKE = [
-  [T, T, O, O, T, T, T, T, O, O, T, T],
-  [T, O, B, B, O, T, T, O, B, B, O, T],
-  [O, B, I, B, B, O, O, B, B, I, B, O],
-  [O, B, B, B, B, B, B, B, B, B, B, O],
+  [T, T, HD, HD, HD, HD, HD, HD, HD, HD, T, T],
+  [T, H, B, B, O, T, T, O, B, B, H, T],
+  [H, H, I, B, B, O, O, B, B, I, H, H],
+  [H, H, B, B, B, B, B, B, B, B, H, H],
   [O, B, G, B, B, B, B, B, B, G, B, O],
   [O, B, G, B, B, N, B, B, B, G, B, O],
   [O, B, B, B, B, B, B, B, B, B, B, O],
@@ -83,10 +87,10 @@ const CAT_PIXELS_AWAKE = [
 ];
 
 const CAT_PIXELS_SLEEPING = [
-  [T, T, O, O, T, T, T, T, O, O, T, T],
-  [T, O, B, B, O, T, T, O, B, B, O, T],
-  [O, B, I, B, B, O, O, B, B, I, B, O],
-  [O, B, B, B, B, B, B, B, B, B, B, O],
+  [T, T, HD, HD, HD, HD, HD, HD, HD, HD, T, T],
+  [T, H, B, B, O, T, T, O, B, B, H, T],
+  [H, H, I, B, B, O, O, B, B, I, H, H],
+  [H, H, B, B, B, B, B, B, B, B, H, H],
   [O, B, O, O, B, B, B, B, O, O, B, O],
   [O, B, B, B, B, N, B, B, B, B, B, O],
   [O, B, B, B, B, B, B, B, B, B, B, O],
@@ -155,7 +159,11 @@ function HeartParticle({ x, y, delay }: { x: number; y: number; delay: number })
   );
 }
 
-export default function PixelCat() {
+interface PixelCatProps {
+  speechLines?: string[];
+}
+
+export default function PixelCat({ speechLines }: PixelCatProps = {}) {
   const { isPaused, currentTrack } = usePlayer();
   const [catState, setCatState] = useState<CatState>("sleeping");
   const [hearts, setHearts] = useState<{ x: number; y: number; id: number }[]>([]);
@@ -205,6 +213,10 @@ export default function PixelCat() {
       : catState === "sleeping"
       ? "animate-cat-breathe"
       : "";
+
+  const lines = speechLines && speechLines.length > 0
+    ? speechLines
+    : ["MUSIC", "MAKES A", "BETTER DAY."];
 
   return (
     <div
@@ -266,9 +278,11 @@ export default function PixelCat() {
           </span>
 
           <div className="font-pixel text-[6px] text-[#94A3B8] leading-tight space-y-0.5 select-none text-left">
-            <div>MUSIC</div>
-            <div>MAKES A</div>
-            <div className="text-[#38BDF8]">BETTER DAY.</div>
+            {lines.map((l, i) => (
+              <div key={i} className={i === lines.length - 1 ? "text-[#22C55E]" : ""}>
+                {l}
+              </div>
+            ))}
           </div>
 
           {/* Thought bubble pointer dots to cat */}

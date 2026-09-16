@@ -146,8 +146,13 @@ export default function Sidebar({ currentView, onNavigate, soundFX }: SidebarPro
               </div>
             </div>
             <span className="font-pixel text-[5px] text-[#94A3B8] leading-tight">
-              Good Music<br />Brighter Days.
+              {currentView === "discover" ? (
+                <>Music Travels<br />Further.</>
+              ) : (
+                <>Good Music<br />Brighter Days.</>
+              )}
             </span>
+            <div className="w-5 h-[2px] bg-[#22C55E] mt-1 rounded-full shadow-[0_0_4px_#22C55E]" />
           </div>
         </div>
 

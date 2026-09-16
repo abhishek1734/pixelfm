@@ -99,7 +99,7 @@ export default function NowPlayingDeck({
       <div className="rack-screw screw-br" />
 
       {/* Optional Minimize Header for Mobile Full Screen */}
-      {onClose && (
+      {onClose ? (
         <div className="flex items-center justify-between pb-2 mb-1 border-b border-[#142236] z-10 relative">
           <button
             onClick={() => {
@@ -114,6 +114,10 @@ export default function NowPlayingDeck({
           <span className="font-pixel text-[8px] text-[#22C55E] tracking-widest">
             NOW PLAYING
           </span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center font-pixel text-[8px] text-[#64748B] tracking-widest uppercase">
+          &gt; NOW PLAYING &lt;
         </div>
       )}
 
@@ -359,6 +363,28 @@ export default function NowPlayingDeck({
         <span className="font-mono text-[10px] text-[#94A3B8] w-7 text-right">
           {Math.round(volume * 100)}
         </span>
+      </div>
+
+      {/* Lyrics Box */}
+      <div className="border border-[#142236] bg-[#070B10] p-3 rounded-[2px] mt-1 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="font-pixel text-[9px] text-[#E2E8F0] tracking-wider">Lyrics</span>
+          <button
+            onClick={() => {
+              if (soundFX) playChime("click");
+            }}
+            className="text-[#64748B] hover:text-[#22C55E] text-xs transition-colors"
+            title="Expand lyrics"
+          >
+            ⤢
+          </button>
+        </div>
+        <div className="font-mono text-[10px] text-[#94A3B8] leading-relaxed space-y-1 select-text">
+          <p>Sunlight on my shoulders</p>
+          <p>Feels a little lighter now</p>
+          <p>Feet don&apos;t touch the ground</p>
+          <p>But I&apos;m steady somehow...</p>
+        </div>
       </div>
     </div>
   );
